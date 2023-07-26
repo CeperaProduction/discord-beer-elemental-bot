@@ -1,0 +1,37 @@
+{
+  "content" : {
+
+
+	  "command.auction": "auction",
+	  "command.auction.description": "Announce the start of the roll of the item from the auction",
+	  "command.auction.option.item": "item",
+	  "command.auction.option.item.description": "Screenshot of the item from the auction",
+	  "command.auction.option.count": "count",
+	  "command.auction.option.count.description": "Count of lots with this item",
+	  "command.auction.option.role": "role",
+	  "command.auction.option.role.description": "Role of clan members, who can participate",
+	  "command.auction.option.time": "time",
+	  "command.auction.option.time.description": "Time until the roll (ex. 2h 30m)",
+	  "command.locale": "lang",
+	  "command.locale.description": "Set bot broadcasts language",
+	  "command.locale.option.locale": "tag",
+	  "command.locale.option.locale.description": "Tag of language",
+
+	  "message.auction.prepare": "An important item is in auction. Start the roll...",
+	  "message.auction.start": "{role}\nTo participate put any reaction to this message.\nThe roll will be at {time}",
+	  "message.auction.start.many": "{role}\nTo participate put any reaction to this message.\nCount of lots: {count}.\nThe roll will be at {time}",
+	  "message.auction.participants": "Participants:\n{participants}",
+	  "message.auction.results": "Winners: {winners}\nYou can bid on the auction in the game.",
+	  "message.auction.no_participants": "{role}\nТo one wanted to participate in the roll. Everyone can bid on the auction in the game.",
+	  "message.auction.wrong_attachment": "You must to apply an screenshot of lot",
+	  "message.auction.wrong_role": "Can't find target role",
+	  "message.auction.wrong_time": "Time until the roll set wrong (ex 2h 30m)",
+	  "message.auction.only_in_channel": "Functions of auction are available only on a server",
+	  "message.locale.set": "Bot broadcasts language set to {locale}",
+	  "message.locale.only_in_channel": "Language settings available only on a server",
+	  "message.locale.only_for_administrator": "Language settings available only for server administrators",
+
+	  "message.command.error": "An error has occurred while executing the command"
+
+	}
+}

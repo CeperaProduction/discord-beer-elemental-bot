@@ -1,0 +1,37 @@
+{
+  "content" : {
+
+
+	  "command.auction": "аукцион",
+	  "command.auction.description": "Объявить начало рола предмета с аукциона",
+	  "command.auction.option.item": "предмет",
+	  "command.auction.option.item.description": "Скриншот предмета на аукционе",
+	  "command.auction.option.count": "количество",
+	  "command.auction.option.count.description": "Количество лотов с этим предметом",
+	  "command.auction.option.role": "роль",
+	  "command.auction.option.role.description": "Роль членов королевства, кто сможет делать ставки",
+	  "command.auction.option.time": "время",
+	  "command.auction.option.time.description": "Время до розыгрыша (пример 2h 30m)",
+	  "command.locale": "язык",
+	  "command.locale.description": "Установить язык для общих сообщений от бота",
+	  "command.locale.option.locale": "тэг",
+	  "command.locale.option.locale.description": "Тэг языка",
+
+	  "message.auction.prepare": "На аукционе важный предмет. Начинаем розыгрыш...",
+	  "message.auction.start": "{role}\nЧтобы принять участие, ставьте любые реакции на это сообщение.\nРозыгрыж в {time}",
+	  "message.auction.start.many": "{role}\nЧтобы принять участие, ставьте любые реакции на это сообщение.\nКоличество лотов: {count}.\nРозыгрыж в {time}",
+	  "message.auction.participants": "Участники:\n{participants}",
+	  "message.auction.results": "Победители: {winners}\nДелайте ставку в игре.",
+	  "message.auction.no_participants": "{role}\nНикто не захотел участвовать в розыгрыше. Делайте ставки в игре все, кто хочет.",
+	  "message.auction.wrong_attachment": "Необходимо прикрепить изображение предмета на аукционе",
+	  "message.auction.wrong_role": "Не удалось определить целевую роль",
+	  "message.auction.wrong_time": "Время до розыгрыша указано неверно (пример 2h 30m)",
+	  "message.auction.only_in_channel": "Функции аукциона доступны только на сервере",
+	  "message.locale.set": "Язык общих сообщений от бота установлен на {locale}",
+	  "message.locale.only_in_channel": "Функции настройки языка доступны только на сервере",
+	  "message.locale.only_for_administrator": "Функции настройки языка доступны только администраторам сервера",
+
+	  "message.command.error": "Во время выполнения команды произошла ошибка"
+
+	}
+}
