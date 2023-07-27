@@ -266,16 +266,16 @@ public class AuctionDiscordBotModule implements DiscordBotModule, DiscordToolset
                 while(!possible.isEmpty() && winnedSet.size() < auction.getCount()) {
                     winnedSet.add(possible.remove(rand.nextInt(possible.size())));
                 }
-                List<String> participants = new ArrayList<String>();
+                List<String> participantDisplayNames = new ArrayList<String>();
                 for(int i = 0; i < members.size(); ++i) {
                     String member = members.get(i);
                     if(winnedSet.contains(member)) {
-                        participants.add("**"+i+". "+member+"**");
+                        participantDisplayNames.add("> "+i+". "+member);
                     }else {
-                        participants.add(i+". "+member);
+                        participantDisplayNames.add(i+". "+member);
                     }
                 }
-                return Tuples.of(participants, new ArrayList<>(winnedSet));
+                return Tuples.of(participantDisplayNames, new ArrayList<>(winnedSet));
             })
             .zipWith(guild.getData(), (tuple, g)->Tuples.of(tuple.getT1(), tuple.getT2(), g))
             .zipWhen(tuple->guildLocaleRepository.getGuildLocale(tuple.getT3().id().asLong()),

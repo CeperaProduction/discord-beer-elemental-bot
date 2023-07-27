@@ -62,9 +62,13 @@ public interface DiscordToolset {
         return httpService().get(URI.create(url));
     }
 
+    default String getAttachmentContentUrl(Attachment attachment){
+        return attachment.getProxyUrl();
+    }
+
     default Mono<byte[]> getAttachmentContent(Attachment attachment) {
         return Mono.fromSupplier(()->attachment)
-                .flatMap(att->getResource(att.getProxyUrl()));
+                .flatMap(att->getResource(getAttachmentContentUrl(attachment)));
     }
 
     default String createActionIdentity(ApplicationCommandInteractionEvent event, String prefix) {

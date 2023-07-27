@@ -4,7 +4,7 @@ import discord4j.core.DiscordClient;
 
 public interface DiscordBot {
 
-    void start(String botApiKey);
+    void start();
 
     DiscordClient getDiscordClient();
 

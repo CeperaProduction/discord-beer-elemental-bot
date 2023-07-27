@@ -16,6 +16,14 @@
 	  "command.locale.description": "Установить язык для общих сообщений от бота",
 	  "command.locale.option.locale": "тэг",
 	  "command.locale.option.locale.description": "Тэг языка",
+	  "command.nicknames": "ники",
+	  "command.nicknames.description": "Собрать все никнеймы на изображениях в виде текста",
+	  "command.nicknames.option.image": "изображение",
+	  "command.nicknames.option.image.description": "Изображение, на котором следует собрать никнеймы",
+	  "command.nicknames.option.expanded": "расширить",
+	  "command.nicknames.option.expanded.description": "Отобразить расширенный результат",
+
+	  "command.message.nicknames": "Никнеймы",
 
 	  "message.auction.prepare": "На аукционе важный предмет. Начинаем розыгрыш...",
 	  "message.auction.start": "{role}\nЧтобы принять участие, ставьте любые реакции на это сообщение.\nРозыгрыж в {time}",
@@ -30,6 +38,8 @@
 	  "message.locale.set": "Язык общих сообщений от бота установлен на {locale}",
 	  "message.locale.only_in_channel": "Функции настройки языка доступны только на сервере",
 	  "message.locale.only_for_administrator": "Функции настройки языка доступны только администраторам сервера",
+	  "message.nicknames.cant_receive_any_image": "Не удалось загрузить ни одного изображения",
+	  "message.nicknames.nothing_was_found": "Не удалось найти ни одного никнейма",
 
 	  "message.command.error": "Во время выполнения команды произошла ошибка"
 

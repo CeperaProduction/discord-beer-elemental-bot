@@ -6,9 +6,9 @@
 
 	<groupId>me.cepera</groupId>
 	<artifactId>discord-beer-elemental-bot</artifactId>
-	<version>1.0.0</version>
+	<version>1.1.0</version>
 
-	<name>NiNoKuni kingdom bot</name>
+	<name>Beer Elemental - NiNoKuni kingdom helper bot</name>
 
 	<properties>
 

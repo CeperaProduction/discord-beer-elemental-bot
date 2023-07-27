@@ -41,6 +41,19 @@ public interface RemoteService {
                 .responseSingle(this::resolveResponse);
     }
 
+    default Mono<byte[]> post(URI uri, byte[] requestBody){
+        return post(uri, Collections.emptyMap(), requestBody);
+    }
+
+    default Mono<byte[]> post(URI uri, Map<String, String> headersMap, byte[] requestBody){
+        return httpClient()
+                .headers(headers->headersMap.forEach((key, value)->headers.add(key, value)))
+                .post()
+                .uri(uri)
+                .send((req, out)->out.sendByteArray(Mono.just(requestBody)))
+                .responseSingle(this::resolveResponse);
+    }
+
     default Mono<byte[]> postForm(URI uri, Map<String, String> formTextFields){
         return postForm(uri, Collections.emptyMap(), formTextFields, Collections.emptyMap());
     }

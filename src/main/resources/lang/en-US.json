@@ -16,6 +16,14 @@
 	  "command.locale.description": "Set bot broadcasts language",
 	  "command.locale.option.locale": "tag",
 	  "command.locale.option.locale.description": "Tag of language",
+	  "command.nicknames": "nicknames",
+	  "command.nicknames.description": "Collect all nicknames from given images and show them as text",
+	  "command.nicknames.option.image": "image",
+	  "command.nicknames.option.image.description": "Image to search nicknames",
+	  "command.nicknames.option.expanded": "expand",
+	  "command.nicknames.option.expanded.description": "Show expanded result",
+
+	  "command.message.nicknames": "Nicknames",
 
 	  "message.auction.prepare": "An important item is in auction. Start the roll...",
 	  "message.auction.start": "{role}\nTo participate put any reaction to this message.\nThe roll will be at {time}",
@@ -30,6 +38,8 @@
 	  "message.locale.set": "Bot broadcasts language set to {locale}",
 	  "message.locale.only_in_channel": "Language settings available only on a server",
 	  "message.locale.only_for_administrator": "Language settings available only for server administrators",
+	  "message.nicknames.cant_receive_any_image": "Can't load any image",
+	  "message.nicknames.nothing_was_found": "No nicknames were found",
 
 	  "message.command.error": "An error has occurred while executing the command"
 

@@ -6,8 +6,10 @@ import org.apache.logging.log4j.Logger;
 import discord4j.core.DiscordClient;
 import discord4j.core.GatewayDiscordClient;
 import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
+import discord4j.core.event.domain.interaction.MessageInteractionEvent;
 import discord4j.core.event.domain.lifecycle.ReadyEvent;
 import discord4j.discordjson.json.ApplicationCommandRequest;
+import me.cepera.discord.bot.beerelemental.config.DiscordBotConfig;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
@@ -19,10 +21,18 @@ public abstract class BasicDiscordBot implements DiscordBot{
 
     private final Scheduler botActionsScheduler = Schedulers.newBoundedElastic(Schedulers.DEFAULT_BOUNDED_ELASTIC_SIZE, Integer.MAX_VALUE, "discord-bot-actions");
 
+    protected final DiscordBotConfig config;
+
     private DiscordClient discordClient;
 
+    public BasicDiscordBot(DiscordBotConfig config) {
+        this.config = config;
+    }
+
     @Override
-    public void start(String botApiKey) {
+    public void start() {
+
+        String botApiKey = config.getKey();
 
         if(botApiKey == null || botApiKey.isEmpty()) {
             throw new IllegalArgumentException("Discord bot key must be provided.");
@@ -75,6 +85,15 @@ public abstract class BasicDiscordBot implements DiscordBot{
                     }))
             .subscribe();
 
+        client.on(MessageInteractionEvent.class)
+        .publishOn(botActionsScheduler)
+        .flatMap(event->this.handleMessageInteractionEvent(event)
+                .onErrorResume(e->{
+                    LOGGER.error("Error on handling message interaction", e);
+                    return Mono.empty();
+                }))
+        .subscribe();
+
     }
 
     protected Mono<Void> handleReadyEvent(ReadyEvent event){
@@ -82,6 +101,10 @@ public abstract class BasicDiscordBot implements DiscordBot{
     }
 
     protected Mono<Void> handleChatInputInteractionEvent(ChatInputInteractionEvent event){
+        return Mono.empty();
+    }
+
+    protected Mono<Void> handleMessageInteractionEvent(MessageInteractionEvent event){
         return Mono.empty();
     }
 

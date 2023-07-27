@@ -11,6 +11,7 @@ import me.cepera.discord.bot.beerelemental.discord.DiscordBot;
 import me.cepera.discord.bot.beerelemental.discord.DiscordBotModule;
 import me.cepera.discord.bot.beerelemental.discord.ModuledDiscordBot;
 import me.cepera.discord.bot.beerelemental.discord.modules.AuctionDiscordBotModule;
+import me.cepera.discord.bot.beerelemental.discord.modules.ImageToTextDiscordBotModule;
 import me.cepera.discord.bot.beerelemental.discord.modules.LocaleDiscordBotModule;
 import me.cepera.discord.bot.beerelemental.scheduling.AuctionDiscordBotModuleScheduler;
 import me.cepera.discord.bot.beerelemental.scheduling.DiscordBotScheduler;
@@ -28,6 +29,12 @@ public class DiscordModule {
     @Provides
     @IntoSet
     DiscordBotModule localeDiscordBotModule(LocaleDiscordBotModule module) {
+        return module;
+    }
+
+    @Provides
+    @IntoSet
+    DiscordBotModule imageToTextDiscordBotModule(ImageToTextDiscordBotModule module) {
         return module;
     }
 
