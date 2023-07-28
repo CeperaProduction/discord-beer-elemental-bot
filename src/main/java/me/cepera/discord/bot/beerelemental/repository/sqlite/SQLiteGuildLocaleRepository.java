@@ -1,28 +1,29 @@
-package me.cepera.discord.bot.beerelemental.repository;
+package me.cepera.discord.bot.beerelemental.repository.sqlite;
 
-import java.nio.file.Path;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 
 import me.cepera.discord.bot.beerelemental.model.GuildLocale;
+import me.cepera.discord.bot.beerelemental.repository.GuildLocaleRepository;
+import me.cepera.discord.bot.beerelemental.repository.sqlite.db.SQLiteDatabase;
 import reactor.core.publisher.Mono;
 
 public class SQLiteGuildLocaleRepository extends SQLiteRepository implements GuildLocaleRepository{
 
-    public SQLiteGuildLocaleRepository(Path path) {
-        super(path);
+    public SQLiteGuildLocaleRepository(SQLiteDatabase database) {
+        super(database);
         prepareTable();
     }
 
     private void prepareTable() {
-        openConnection(c->c.createStatement().execute("CREATE TABLE IF NOT EXISTS guild_locales ("
+        connect(c->c.createStatement().execute("CREATE TABLE IF NOT EXISTS guild_locales ("
                 + "id integer PRIMARY KEY, "
                 + "guildId integer NOT NULL, "
                 + "localeId integer NOT NULL)"));
     }
 
     private void writeGuildLocale(long guildId, GuildLocale locale) {
-        openConnection(c->{
+        connect(c->{
             PreparedStatement stm = c.prepareStatement("INSERT INTO guild_locales (guildId, localeId) VALUES (?,?)");
             stm.setLong(1, guildId);
             stm.setInt(2, locale.index());
@@ -31,7 +32,7 @@ public class SQLiteGuildLocaleRepository extends SQLiteRepository implements Gui
     }
 
     private GuildLocale readGuildLocale(long guildId) {
-        Integer localeId = openConnection(c->{
+        Integer localeId = connect(c->{
             PreparedStatement stm = c.prepareStatement("SELECT localeId FROM guild_locales WHERE guildId = ?");
             stm.setLong(1, guildId);
             ResultSet res = stm.executeQuery();
@@ -40,7 +41,6 @@ public class SQLiteGuildLocaleRepository extends SQLiteRepository implements Gui
             }
             return null;
         });
-        System.out.println("index: "+localeId);
         return GuildLocale.fromIndex(localeId);
     }
 

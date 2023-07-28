@@ -17,16 +17,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.netty.util.internal.ThrowableUtil;
 
-public class LanguageLocalService {
+public class LanguageService {
 
-    private static final Logger LOGGER = LogManager.getLogger(LanguageLocalService.class);
+    private static final Logger LOGGER = LogManager.getLogger(LanguageService.class);
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final Map<String, Map<String, String>> keyToLangToValue;
 
     @Inject
-    public LanguageLocalService() {
+    public LanguageService() {
         this.keyToLangToValue = loadKeyToLangToValueMapping();
     }
 

@@ -1,11 +1,15 @@
-package me.cepera.discord.bot.beerelemental.discord.modules;
+package me.cepera.discord.bot.beerelemental.discord.components;
 
 import java.io.ByteArrayInputStream;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -35,46 +39,60 @@ import discord4j.discordjson.json.MessageReferenceData;
 import discord4j.rest.entity.RestChannel;
 import discord4j.rest.entity.RestGuild;
 import discord4j.rest.entity.RestMessage;
+import discord4j.rest.util.AllowedMentions;
 import io.netty.util.internal.ThrowableUtil;
 import me.cepera.discord.bot.beerelemental.discord.DiscordBot;
-import me.cepera.discord.bot.beerelemental.discord.DiscordBotModule;
+import me.cepera.discord.bot.beerelemental.discord.DiscordBotComponent;
 import me.cepera.discord.bot.beerelemental.discord.DiscordToolset;
-import me.cepera.discord.bot.beerelemental.local.lang.LanguageLocalService;
+import me.cepera.discord.bot.beerelemental.local.lang.LanguageService;
 import me.cepera.discord.bot.beerelemental.model.ActiveAuction;
+import me.cepera.discord.bot.beerelemental.model.GuildLocale;
+import me.cepera.discord.bot.beerelemental.model.KingdomMember;
 import me.cepera.discord.bot.beerelemental.repository.ActiveAuctionRepository;
 import me.cepera.discord.bot.beerelemental.repository.GuildLocaleRepository;
+import me.cepera.discord.bot.beerelemental.repository.KingdomMemberRepository;
+import me.cepera.discord.bot.beerelemental.repository.KingdomRepository;
 import me.cepera.discord.bot.beerelemental.utils.ImageUtils;
 import me.cepera.discord.bot.beerelemental.utils.TimeUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
-public class AuctionDiscordBotModule implements DiscordBotModule, DiscordToolset {
+public class AuctionDiscordBotComponent implements DiscordBotComponent, DiscordToolset {
 
-    private static final Logger LOGGER = LogManager.getLogger(AuctionDiscordBotModule.class);
+    private static final Logger LOGGER = LogManager.getLogger(AuctionDiscordBotComponent.class);
 
     public static final String COMMAND_AUCTION= "auction";
     public static final String COMMAND_OPTION_ITEM = "item";
     public static final String COMMAND_OPTION_COUNT = "count";
     public static final String COMMAND_OPTION_ROLE = "role";
     public static final String COMMAND_OPTION_TIME = "time";
+    public static final String COMMAND_OPTION_MEMBERS = "members";
 
-    private final LanguageLocalService languageService;
+    private final LanguageService languageService;
 
     private final ActiveAuctionRepository activeAuctionRepository;
 
     private final GuildLocaleRepository guildLocaleRepository;
 
+    private final KingdomRepository kingdomRepository;
+
+    private final KingdomMemberRepository kingdomMemberRepository;
+
     @Inject
-    public AuctionDiscordBotModule(LanguageLocalService languageService,
-            ActiveAuctionRepository activeAuctionRepository, GuildLocaleRepository guildLocaleRepository) {
+    public AuctionDiscordBotComponent(LanguageService languageService, ActiveAuctionRepository activeAuctionRepository,
+            GuildLocaleRepository guildLocaleRepository, KingdomRepository kingdomRepository,
+            KingdomMemberRepository kingdomMemberRepository) {
         this.languageService = languageService;
         this.activeAuctionRepository = activeAuctionRepository;
         this.guildLocaleRepository = guildLocaleRepository;
+        this.kingdomRepository = kingdomRepository;
+        this.kingdomMemberRepository = kingdomMemberRepository;
     }
 
     @Override
-    public LanguageLocalService languageService() {
+    public LanguageService languageService() {
         return languageService;
     }
 
@@ -120,6 +138,14 @@ public class AuctionDiscordBotModule implements DiscordBotModule, DiscordToolset
                             .required(false)
                             .type(3)
                             .build())
+                    .addOption(ApplicationCommandOptionData.builder()
+                            .name(COMMAND_OPTION_MEMBERS)
+                            .nameLocalizationsOrNull(localization("command.auction.option.members"))
+                            .description(localization(null, "command.auction.option.members.description"))
+                            .descriptionLocalizationsOrNull(localization("command.auction.option.members.description"))
+                            .required(false)
+                            .type(3)
+                            .build())
                     .build());
         });
     }
@@ -145,17 +171,20 @@ public class AuctionDiscordBotModule implements DiscordBotModule, DiscordToolset
                 .map(value->value.asRole())
                 .orElseGet(()->Mono.empty());
 
-        String timeString = event.getOption(COMMAND_OPTION_TIME)
+        Optional<String> timeString = event.getOption(COMMAND_OPTION_TIME)
                 .flatMap(option->option.getValue())
-                .map(value->value.asString().trim())
-                .orElse("4h");
+                .map(value->value.asString().trim());
 
-        return handleAuctionCommand(event, attachment, count, maybeRole, timeString);
+        Optional<String> members = event.getOption(COMMAND_OPTION_MEMBERS)
+                .flatMap(option->option.getValue())
+                .map(value->value.asString().trim());
+
+        return handleAuctionCommand(event, attachment, count, maybeRole, timeString, members);
 
     }
 
     private Mono<Void> handleAuctionCommand(ChatInputInteractionEvent event, Attachment attachment, int count,
-            Mono<Role> maybeRole, String timeOffsetString){
+            Mono<Role> maybeRole, Optional<String> timeString, Optional<String> members){
 
         String actionIdentity = createActionIdentity(event, "auction");
 
@@ -163,7 +192,7 @@ public class AuctionDiscordBotModule implements DiscordBotModule, DiscordToolset
             String contentType = attachment.getContentType().orElse("");
             LOGGER.info("Received attachment with type {} for action {}", contentType, actionIdentity);
             if(!isImage(contentType)) {
-                return replyError(event, this::wrongAttachmentResponseText, true);
+                return replyError(event, this::wrongAttachmentResponseText, false);
             }
         }
 
@@ -178,30 +207,72 @@ public class AuctionDiscordBotModule implements DiscordBotModule, DiscordToolset
                 .zipWith(maybeRole.switchIfEmpty(Mono.defer(()->
                     replyError(event, this::wrongTargetRoleResponseText, true).then(Mono.empty()))),
                         (tuple, role)->Tuples.of(tuple.getT1(), tuple.getT2(), role))
-                .zipWith(TimeUtils.getInstant(timeOffsetString).onErrorResume(e->replyError(event, this::wrongTimeResponseText, true).then(Mono.empty())),
-                        (tuple, instant)->Tuples.of(tuple.getT1(), tuple.getT2(), tuple.getT3(), instant))
                 .zipWith(getAttachmentContent(attachment)
                         .filter(bytes->bytes.length > 0)
                         .switchIfEmpty(Mono.defer(()->replyError(event, this::wrongAttachmentResponseText, true).then(Mono.empty()))),
-                        (tuple, item)->Tuples.of(tuple.getT1(), tuple.getT2(), tuple.getT3(), tuple.getT4(), item))
+                        (tuple, item)->Tuples.of(tuple.getT1(), tuple.getT2(), tuple.getT3(), item))
                 .flatMap(tuple->{
-                    Guild guild = tuple.getT1();
-                    MessageChannel channel = tuple.getT2();
-                    byte[] itemBytes = tuple.getT5();
-                    Role role = tuple.getT3();
-                    Instant rollTime = tuple.getT4();
-                    return sendAuctionStartMessage(event, guild, itemBytes, count, role, rollTime)
-                            .flatMap(message->{
-                                ActiveAuction auction = createAuction(guild, channel, count, role, message, rollTime);
-                                return activeAuctionRepository.saveAuction(auction)
-                                    .then(Mono.fromRunnable(()->LOGGER.info("Auction {} created. Action: {}", auction, actionIdentity)).then());
-                            });
+                    if(timeString.isPresent() && members.isPresent()) {
+                        return replyError(event, this::onlyTimeOrMembersResponseText, true);
+                    }
+                    if(members.isPresent()) {
+                        List<String> memberList = Arrays.stream(members.get().split("\\s"))
+                                .map(String::trim).filter(str->!str.isEmpty()).collect(Collectors.toList());
+                        memberList = new ArrayList<>(new LinkedHashSet<>(memberList));
+                        return doInstantAuction(event, actionIdentity, tuple.getT4(), count, tuple.getT1(), tuple.getT2(), tuple.getT3(), memberList);
+                    }
+                    return startActiveAuction(event, actionIdentity, tuple.getT4(), count, tuple.getT1(), tuple.getT2(), tuple.getT3(), timeString.orElse("4h"));
                 })
                 .onErrorResume(e->{
                     LOGGER.error("Error during auction creation. Action: {} Error: {}", actionIdentity, ThrowableUtil.stackTraceToString(e));
                     return replyError(event, this::defaultCommandErrorText, true);
                 });
 
+    }
+
+    private Mono<Void> startActiveAuction(ChatInputInteractionEvent event, String actionIdentity, byte[] itemBytes, int count,
+            Guild guild, MessageChannel channel, Role role, String timeOffsetString){
+        return TimeUtils.getInstant(timeOffsetString).onErrorResume(e->replyError(event, this::wrongTimeResponseText, true).then(Mono.empty()))
+                .flatMap(rollTime->sendAuctionStartMessage(event, guild, itemBytes, count, role, rollTime)
+                            .flatMap(message->{
+                                ActiveAuction auction = createAuction(guild, channel, count, role, message, rollTime);
+                                return activeAuctionRepository.saveAuction(auction)
+                                    .then(Mono.fromRunnable(()->LOGGER.info("Auction {} created. Action: {}", auction, actionIdentity)).then());
+                            }));
+    }
+
+    private Mono<Void> doInstantAuction(ChatInputInteractionEvent event, String actionIdentity, byte[] itemBytes, int count,
+            Guild guild, MessageChannel channel, Role role, List<String> members){
+        return  guildLocaleRepository.getGuildLocale(guild.getId().asLong())
+                .map(GuildLocale::getLanguageTag)
+                .flatMap(langTag->event.editReply()
+                        .withContentOrNull(auctionPrepareText(langTag))
+                        .flatMap(prepareMessage->kingdomRepository.getKingdomByRole(guild.getId().asLong(), role.getId().asLong())
+                                .flatMap(kd->kingdomMemberRepository.getMembers(kd)
+                                        .collectMap(member->member.getName().toLowerCase()))
+                                .switchIfEmpty(Mono.fromSupplier(Collections::emptyMap))
+                                .flatMapMany(memberMap->Flux.fromIterable(members)
+                                        .map(nick->Optional.ofNullable(memberMap.get(nick.toLowerCase()))
+                                                .map(member->new AuctionParticipant(Optional.of(member.getName()), Optional.ofNullable(member.getDiscordUserId())))
+                                                .orElseGet(()->new AuctionParticipant(Optional.of(nick), Optional.empty()))))
+                                .collectList()
+                                .filter(list->!list.isEmpty())
+                                .map(participants->getParticipantsAndWinnersDisplays(participants, count))
+                                .zipWhen(tuple->guildLocaleRepository.getGuildLocale(guild.getId().asLong()),
+                                        (tuple, locale)->Tuples.of(tuple.getT1(), tuple.getT2(), locale))
+                                .flatMap(tuple->event.createFollowup(role.getMention()+"\n"
+                                            +(count > 1 ? auctionCountText(langTag, count)+"\n" : "")
+                                            +auctionParticipantsText(langTag, tuple.getT1()))
+                                        .withAllowedMentions(AllowedMentions.suppressAll())
+                                        .withFiles(MessageCreateFields.File.of("item.png",
+                                                new ByteArrayInputStream(ImageUtils.writeImagePng(ImageUtils.readImage(itemBytes)))))
+                                        .flatMap(message->channel.createMessage()
+                                                .withMessageReference(message.getId())
+                                                .withContent(auctionResultText(langTag, tuple.getT2()))))
+                                )
+                        )
+                .then(Mono.fromRunnable(()->LOGGER.info("Instant auction for guildId {} and roleId {} completed. Action: {}",
+                        guild.getId().asLong(), role.getId().asLong(), actionIdentity)).then());
     }
 
     private ActiveAuction createAuction(Guild guild, MessageChannel channel, int count, Role role, Message message, Instant rollTime) {
@@ -232,19 +303,17 @@ public class AuctionDiscordBotModule implements DiscordBotModule, DiscordToolset
 
     public Mono<Void> completeEndedAuctions(DiscordBot bot){
         return activeAuctionRepository.getEndedActiveAuctions()
-                .flatMap(auction->completeAuction(bot, auction))
+                .flatMap(auction->completeActiveAuction(bot, auction))
                 .then();
     }
 
-    private Mono<Void> completeAuction(DiscordBot bot, ActiveAuction auction){
+    private Mono<Void> completeActiveAuction(DiscordBot bot, ActiveAuction auction){
 
         RestGuild guild = bot.getDiscordClient().getGuildById(Snowflake.of(auction.getGuildId()));
 
         RestChannel channel = bot.getDiscordClient().getChannelById(Snowflake.of(auction.getChannelId()));
 
         RestMessage message = channel.getRestMessage(Snowflake.of(auction.getMessageId()));
-
-        Random rand = new Random();
 
         return message.getData()
             .flatMap(messageData->Mono.justOrEmpty(messageData.reactions().toOptional()))
@@ -254,29 +323,23 @@ public class AuctionDiscordBotModule implements DiscordBotModule, DiscordToolset
                     .getReactions(auction.getChannelId(), auction.getMessageId(), reaction, Collections.emptyMap()))
             .map(userData->userData.id().asLong())
             .collect(Collectors.toSet())
-            .flatMapIterable(ids->ids)
-            .flatMap(userId->guild.getMember(Snowflake.of(userId)))
-            .filter(member->auction.getRoleId() == 0 ? true : member.roles().stream().map(Id::asLong).anyMatch(roleId->auction.getRoleId() == roleId))
-            .map(memberData->"<@"+memberData.user().id().asLong()+">")
+            .zipWith(kingdomRepository.getKingdomByRole(guild.getId().asLong(), auction.getRoleId())
+                    .map(Optional::of)
+                    .switchIfEmpty(Mono.fromSupplier(Optional::empty)))
+            .flatMapMany(tuple->Flux.fromIterable(tuple.getT1())
+                    .flatMap(userId->guild.getMember(Snowflake.of(userId)))
+                    .filter(member->auction.getRoleId() == 0 ? true : member.roles().stream().map(Id::asLong).anyMatch(roleId->auction.getRoleId() == roleId))
+                    .flatMap(memberData->Mono.justOrEmpty(tuple.getT2())
+                            .flatMap(kd->kingdomMemberRepository.findMembersByUser(kd, memberData.user().id().asLong())
+                                    .take(1)
+                                    .singleOrEmpty())
+                            .map(Optional::of)
+                            .switchIfEmpty(Mono.fromSupplier(Optional::empty))
+                            .map(opt->Tuples.of(memberData, opt)))
+                    .map(members->new AuctionParticipant(members.getT2().map(KingdomMember::getName), Optional.of(members.getT1().user().id().asLong()))))
             .collectList()
             .filter(list->!list.isEmpty())
-            .map(members->{
-                List<String> possible = new ArrayList<>(members);
-                Set<String> winnedSet = new HashSet<>();
-                while(!possible.isEmpty() && winnedSet.size() < auction.getCount()) {
-                    winnedSet.add(possible.remove(rand.nextInt(possible.size())));
-                }
-                List<String> participantDisplayNames = new ArrayList<String>();
-                for(int i = 0; i < members.size(); ++i) {
-                    String member = members.get(i);
-                    if(winnedSet.contains(member)) {
-                        participantDisplayNames.add("> "+i+". "+member);
-                    }else {
-                        participantDisplayNames.add(i+". "+member);
-                    }
-                }
-                return Tuples.of(participantDisplayNames, new ArrayList<>(winnedSet));
-            })
+            .map(participants->getParticipantsAndWinnersDisplays(participants, auction.getCount()))
             .zipWith(guild.getData(), (tuple, g)->Tuples.of(tuple.getT1(), tuple.getT2(), g))
             .zipWhen(tuple->guildLocaleRepository.getGuildLocale(tuple.getT3().id().asLong()),
                     (tuple, locale)->Tuples.of(tuple.getT1(), tuple.getT2(), tuple.getT3(), locale))
@@ -322,6 +385,29 @@ public class AuctionDiscordBotModule implements DiscordBotModule, DiscordToolset
                 LOGGER.info("Auction {} completed.", auction)).then()));
     }
 
+    private Tuple2<List<String>, List<String>> getParticipantsAndWinnersDisplays(List<AuctionParticipant> participants, int lotsCount){
+        Random rand = new Random();
+        List<AuctionParticipant> possible = new ArrayList<>(participants);
+        Set<AuctionParticipant> winnedSet = new HashSet<>();
+        while(!possible.isEmpty() && winnedSet.size() < lotsCount) {
+            int index = rand.nextInt(possible.size() * 10) / 10;
+            winnedSet.add(possible.remove(index));
+        }
+        List<String> participantDisplayNames = new ArrayList<String>();
+        List<String> winnersDisplayNames = participants.stream()
+                .filter(winnedSet::contains)
+                .map(participant->"> "+participant.toString()).collect(Collectors.toList());
+        for(int i = 0; i < participants.size(); ++i) {
+            AuctionParticipant member = participants.get(i);
+            if(winnedSet.contains(member)) {
+                participantDisplayNames.add(String.format("> %d. %s", i+1, member));
+            }else {
+                participantDisplayNames.add(String.format("%d. %s", i+1, member));
+            }
+        }
+        return Tuples.of(participantDisplayNames, winnersDisplayNames);
+    }
+
 
 
     private boolean isImage(String contentType) {
@@ -346,8 +432,12 @@ public class AuctionDiscordBotModule implements DiscordBotModule, DiscordToolset
         return localization(locale, "message.auction.participants", "participants", String.join("\n", participants));
     }
 
+    private String auctionCountText(String locale, int count) {
+        return localization(locale, "message.auction.count", "count", Integer.toString(count));
+    }
+
     private String auctionResultText(String locale, List<String> winners) {
-        return localization(locale, "message.auction.results", "winners", String.join(", ", winners));
+        return localization(locale, "message.auction.results", "winners", String.join("\n", winners));
     }
 
     private String auctionResultNoParticipantsText(String locale, String roleMention) {
@@ -368,6 +458,54 @@ public class AuctionDiscordBotModule implements DiscordBotModule, DiscordToolset
 
     private String onlyForChannelResponseText(ApplicationCommandInteractionEvent event) {
         return localization(event.getInteraction().getUserLocale(), "message.auction.only_in_channel");
+    }
+
+    private String onlyTimeOrMembersResponseText(ApplicationCommandInteractionEvent event) {
+        return localization(event.getInteraction().getUserLocale(), "message.auction.only_time_or_members");
+    }
+
+    private static class AuctionParticipant {
+
+        final Optional<String> optNick;
+
+        final Optional<Long> optUserId;
+
+        AuctionParticipant(Optional<String> optNick, Optional<Long> optUserId) {
+            this.optNick = optNick;
+            this.optUserId = optUserId;
+        }
+
+        @Override
+        public String toString() {
+            return optNick.map(nick->optUserId.map(this::mention)
+                        .map(mention->nick + " (" + mention + ")")
+                        .orElse(nick))
+                    .orElseGet(()->optUserId.map(this::mention)
+                            .orElse(""));
+        }
+
+        String mention(long id) {
+            return "<@"+id+">";
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(optNick, optUserId);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            AuctionParticipant other = (AuctionParticipant) obj;
+            return Objects.equals(optNick, other.optNick) && Objects.equals(optUserId, other.optUserId);
+        }
+
+
     }
 
 }

@@ -1,7 +1,6 @@
-package me.cepera.discord.bot.beerelemental.discord.modules;
+package me.cepera.discord.bot.beerelemental.discord.components;
 
 import java.io.ByteArrayInputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -26,16 +25,16 @@ import discord4j.core.spec.MessageCreateFields;
 import discord4j.discordjson.json.ApplicationCommandOptionData;
 import discord4j.discordjson.json.ApplicationCommandRequest;
 import io.netty.util.internal.ThrowableUtil;
-import me.cepera.discord.bot.beerelemental.discord.DiscordBotModule;
+import me.cepera.discord.bot.beerelemental.discord.DiscordBotComponent;
 import me.cepera.discord.bot.beerelemental.discord.DiscordToolset;
 import me.cepera.discord.bot.beerelemental.local.ImageToTextService;
-import me.cepera.discord.bot.beerelemental.local.lang.LanguageLocalService;
+import me.cepera.discord.bot.beerelemental.local.lang.LanguageService;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-public class ImageToTextDiscordBotModule implements DiscordBotModule, DiscordToolset {
+public class ImageToTextDiscordBotComponent implements DiscordBotComponent, DiscordToolset {
 
-    private static final Logger LOGGER = LogManager.getLogger(ImageToTextDiscordBotModule.class);
+    private static final Logger LOGGER = LogManager.getLogger(ImageToTextDiscordBotComponent.class);
 
     public static final String COMMAND_NICKNAMES= "nicknames";
     public static final String COMMAND_OPTION_IMAGE = "image";
@@ -43,18 +42,18 @@ public class ImageToTextDiscordBotModule implements DiscordBotModule, DiscordToo
 
     public static final String MESSAGE_COMMAND_NICKNAMES= "nicknames";
 
-    private final LanguageLocalService languageService;
+    private final LanguageService languageService;
 
     private final ImageToTextService imageToTextService;
 
     @Inject
-    public ImageToTextDiscordBotModule(LanguageLocalService languageService, ImageToTextService imageToTextService) {
+    public ImageToTextDiscordBotComponent(LanguageService languageService, ImageToTextService imageToTextService) {
         this.languageService = languageService;
         this.imageToTextService = imageToTextService;
     }
 
     @Override
-    public LanguageLocalService languageService() {
+    public LanguageService languageService() {
         return languageService;
     }
 
@@ -137,7 +136,7 @@ public class ImageToTextDiscordBotModule implements DiscordBotModule, DiscordToo
         }
 
         return event.getTargetMessage()
-                .flatMap(message->handleNicknamesCommand(event, message.getAttachments(), false, Optional.of(createMessageUrl(message))));
+                .flatMap(message->handleNicknamesCommand(event, message.getAttachments(), true, Optional.of(createMessageUrl(message))));
     }
 
     private Mono<Void> handleNicknamesCommand(ApplicationCommandInteractionEvent event, List<Attachment> attachments, boolean expanded,
@@ -184,23 +183,17 @@ public class ImageToTextDiscordBotModule implements DiscordBotModule, DiscordToo
                     .then();
         }
 
-        String content = "```"+String.join(" ", nicknames)+"```";
+        String content;
+        if(expanded) {
+            content = ">>> "+String.join("\n", IntStream.range(0, nicknames.size())
+                    .mapToObj(i->(i+1)+". "+nicknames.get(i))
+                    .collect(Collectors.toList()));
+        }else {
+            content = "```"+String.join(" ", nicknames)+"```";
+        }
 
         if(messageUrl.isPresent()) {
             content = messageUrl.get() + "\n" + content;
-        }
-
-        List<MessageCreateFields.File> files = new ArrayList<>();
-
-        if(expanded) {
-            StringBuilder csvBuilder = new StringBuilder().append(1).append(',').append(nicknames.get(0));
-            IntStream.range(1, nicknames.size())
-                .forEach(i->csvBuilder.append('\n').append(i+1).append(',').append(nicknames.get(i)));
-
-            MessageCreateFields.File file = MessageCreateFields.File.of("nicknames.csv",
-                    new ByteArrayInputStream(csvBuilder.toString().getBytes(StandardCharsets.UTF_8)));
-
-            files.add(file);
         }
 
         String finalContent = content;
@@ -211,14 +204,8 @@ public class ImageToTextDiscordBotModule implements DiscordBotModule, DiscordToo
                 .flatMapMany(attachmentBodies->Flux.range(0, attachmentBodies.size())
                         .map(i->MessageCreateFields.File.of("image"+(i+1)+".png", new ByteArrayInputStream(attachmentBodies.get(i)))))
                 .collectList()
-                .map(imageFiles->{
-                    List<MessageCreateFields.File> allFiles = new ArrayList<>();
-                    allFiles.addAll(files);
-                    allFiles.addAll(imageFiles);
-                    return allFiles;
-                })
-                .flatMap(allFiles->event.editReply(finalContent)
-                    .withFiles(allFiles)
+                .flatMap(imageFiles->event.editReply(finalContent)
+                    .withFiles(imageFiles)
                     .then());
     }
 

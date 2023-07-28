@@ -9,9 +9,14 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import discord4j.core.event.domain.interaction.ApplicationCommandInteractionEvent;
+import discord4j.core.object.command.Interaction;
 import discord4j.core.object.entity.Attachment;
+import discord4j.core.object.entity.Guild;
+import discord4j.core.object.entity.Member;
 import discord4j.core.spec.InteractionApplicationCommandCallbackSpec;
-import me.cepera.discord.bot.beerelemental.local.lang.LanguageLocalService;
+import discord4j.rest.util.AllowedMentions;
+import discord4j.rest.util.Permission;
+import me.cepera.discord.bot.beerelemental.local.lang.LanguageService;
 import me.cepera.discord.bot.beerelemental.local.lang.Translatable;
 import me.cepera.discord.bot.beerelemental.remote.RemoteService;
 import me.cepera.discord.bot.beerelemental.remote.SimpleRemoteService;
@@ -19,7 +24,7 @@ import reactor.core.publisher.Mono;
 
 public interface DiscordToolset {
 
-    LanguageLocalService languageService();
+    LanguageService languageService();
 
     RemoteService defaultHttpService = new SimpleRemoteService();
 
@@ -89,5 +94,45 @@ public interface DiscordToolset {
                     .build());
         }
     }
+
+    default Mono<Boolean> isCalledByAdmin(Interaction interaction) {
+        return isCalledByAdmin(interaction, Member::getGuild);
+    }
+
+    default Mono<Boolean> isCalledByAdmin(Interaction interaction, Guild guild) {
+        return isCalledByAdmin(interaction, member->Mono.just(guild));
+    }
+
+    default Mono<Boolean> isCalledByAdmin(Interaction interaction, Function<Member, Mono<Guild>> guildReceiverGetter) {
+        return Mono.justOrEmpty(interaction.getMember())
+                .flatMap(member->member.getHighestRole()
+                                .filter(role->role.getPermissions().contains(Permission.ADMINISTRATOR))
+                                .map(r->true)
+                                .switchIfEmpty(guildReceiverGetter.apply(member)
+                                        .filter(g->g.getOwnerId().equals(member.getId()))
+                                        .map(g->true)))
+                .switchIfEmpty(Mono.just(false));
+    }
+
+    default <T> Mono<T> simpleReply(ApplicationCommandInteractionEvent event, String content) {
+        return simpleReply(event, content, true);
+    }
+
+    default <T> Mono<T> simpleReply(ApplicationCommandInteractionEvent event, String content, boolean ephemeral){
+        return Mono.defer(()->event.reply()
+                .withContent(content)
+                .withEphemeral(ephemeral)
+                .withAllowedMentions(AllowedMentions.suppressAll())
+                .then(Mono.empty()));
+    }
+
+    default <T> Mono<T> simpleEditReply(ApplicationCommandInteractionEvent event, String content){
+        return Mono.defer(()->event.editReply()
+                .withContentOrNull(content)
+                .withAllowedMentionsOrNull(AllowedMentions.suppressAll())
+                .then(Mono.empty()));
+    }
+
+
 
 }

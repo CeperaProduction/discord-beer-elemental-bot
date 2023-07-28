@@ -1,4 +1,4 @@
-package me.cepera.discord.bot.beerelemental.discord.modules;
+package me.cepera.discord.bot.beerelemental.discord.components;
 
 import java.util.Arrays;
 import java.util.stream.Collectors;
@@ -13,35 +13,34 @@ import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
 import discord4j.discordjson.json.ApplicationCommandOptionChoiceData;
 import discord4j.discordjson.json.ApplicationCommandOptionData;
 import discord4j.discordjson.json.ApplicationCommandRequest;
-import discord4j.rest.util.Permission;
 import io.netty.util.internal.ThrowableUtil;
-import me.cepera.discord.bot.beerelemental.discord.DiscordBotModule;
+import me.cepera.discord.bot.beerelemental.discord.DiscordBotComponent;
 import me.cepera.discord.bot.beerelemental.discord.DiscordToolset;
-import me.cepera.discord.bot.beerelemental.local.lang.LanguageLocalService;
+import me.cepera.discord.bot.beerelemental.local.lang.LanguageService;
 import me.cepera.discord.bot.beerelemental.model.GuildLocale;
 import me.cepera.discord.bot.beerelemental.repository.GuildLocaleRepository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-public class LocaleDiscordBotModule implements DiscordBotModule, DiscordToolset {
+public class LocaleDiscordBotComponent implements DiscordBotComponent, DiscordToolset {
 
-    private static final Logger LOGGER = LogManager.getLogger(LocaleDiscordBotModule.class);
+    private static final Logger LOGGER = LogManager.getLogger(LocaleDiscordBotComponent.class);
 
     public static final String COMMAND_LOCALE= "locale";
     public static final String COMMAND_OPTION_LOCALE = "locale";;
 
-    private final LanguageLocalService languageService;
+    private final LanguageService languageService;
 
     private final GuildLocaleRepository guildLocaleRepository;
 
     @Inject
-    public LocaleDiscordBotModule(LanguageLocalService languageService, GuildLocaleRepository guildLocaleRepository) {
+    public LocaleDiscordBotComponent(LanguageService languageService, GuildLocaleRepository guildLocaleRepository) {
         this.languageService = languageService;
         this.guildLocaleRepository = guildLocaleRepository;
     }
 
     @Override
-    public LanguageLocalService languageService() {
+    public LanguageService languageService() {
         return languageService;
     }
 
@@ -93,11 +92,9 @@ public class LocaleDiscordBotModule implements DiscordBotModule, DiscordToolset 
                 .switchIfEmpty(event.reply()
                         .withContent(onlyForServerResponseText(event))
                         .then(Mono.empty()))
-                .flatMap(guild->Mono.justOrEmpty(event.getInteraction().getMember())
-                        .flatMap(member->member.getHighestRole()
-                                .filter(role->role.getPermissions().contains(Permission.ADMINISTRATOR))
-                                .map(role->guild)
-                                .switchIfEmpty(Mono.just(guild).filter(g->g.getOwnerId().equals(member.getId()))))
+                .flatMap(guild->isCalledByAdmin(event.getInteraction(), guild)
+                        .filter(r->r)
+                        .map(r->guild)
                         .switchIfEmpty(event.reply()
                                 .withContent(onlyForAdministratorResponseText(event))
                                 .withEphemeral(true)

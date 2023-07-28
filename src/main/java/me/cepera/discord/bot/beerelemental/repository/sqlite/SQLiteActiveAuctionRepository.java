@@ -1,24 +1,25 @@
-package me.cepera.discord.bot.beerelemental.repository;
+package me.cepera.discord.bot.beerelemental.repository.sqlite;
 
-import java.nio.file.Path;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 
 import me.cepera.discord.bot.beerelemental.model.ActiveAuction;
+import me.cepera.discord.bot.beerelemental.repository.ActiveAuctionRepository;
+import me.cepera.discord.bot.beerelemental.repository.sqlite.db.SQLiteDatabase;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-public class SQLiteActiveRepository extends SQLiteRepository implements ActiveAuctionRepository{
+public class SQLiteActiveAuctionRepository extends SQLiteRepository implements ActiveAuctionRepository{
 
-    public SQLiteActiveRepository(Path path) {
-        super(path);
-        preapreTable();
+    public SQLiteActiveAuctionRepository(SQLiteDatabase database) {
+        super(database);
+        prepareTable();
     }
 
-    private void preapreTable() {
-        openConnection(c->c.createStatement().execute("CREATE TABLE IF NOT EXISTS auctions ("
+    private void prepareTable() {
+        connect(c->c.createStatement().execute("CREATE TABLE IF NOT EXISTS auctions ("
                     + "id integer PRIMARY KEY, "
                     + "guildId integer NOT NULL, "
                     + "channelId integer NOT NULL, "
@@ -29,7 +30,7 @@ public class SQLiteActiveRepository extends SQLiteRepository implements ActiveAu
     }
 
     private void writeAuction(ActiveAuction auction) {
-        openConnection(c->{
+        connect(c->{
             PreparedStatement stm = c.prepareStatement("INSERT INTO auctions (guildId, channelId, messageId, roleId, count, timestamp) VALUES (?, ?, ?, ?, ?, ?)");
             stm.setLong(1, auction.getGuildId());
             stm.setLong(2, auction.getChannelId());
@@ -46,7 +47,7 @@ public class SQLiteActiveRepository extends SQLiteRepository implements ActiveAu
             return;
         }
 
-        openConnection(c->{
+        connect(c->{
             PreparedStatement stm = c.prepareStatement("DELETE FROM auctions WHERE id = ?");
             stm.setLong(1, auction.getId());
             return stm.executeUpdate();
@@ -54,7 +55,7 @@ public class SQLiteActiveRepository extends SQLiteRepository implements ActiveAu
     }
 
     private List<ActiveAuction> findEndedActiveAuctions(long now){
-        return openConnection(c->{
+        return connect(c->{
             List<ActiveAuction> result = new ArrayList<ActiveAuction>();
             PreparedStatement stm = c.prepareStatement("SELECT id, guildId, channelId, messageId, "
                     + "roleId, count, timestamp FROM auctions WHERE timestamp < ?");

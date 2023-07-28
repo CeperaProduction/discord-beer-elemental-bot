@@ -18,28 +18,28 @@ import me.cepera.discord.bot.beerelemental.config.DiscordBotConfig;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-public class ModuledDiscordBot extends BasicDiscordBot{
+public class ComplexDiscordBot extends BasicDiscordBot{
 
-    private static final Logger LOGGER = LogManager.getLogger(ModuledDiscordBot.class);
+    private static final Logger LOGGER = LogManager.getLogger(ComplexDiscordBot.class);
 
-    private final List<DiscordBotModule> modules;
+    private final List<DiscordBotComponent> components;
 
     @Inject
-    public ModuledDiscordBot(Set<DiscordBotModule> discordBotModules, DiscordBotConfig config) {
+    public ComplexDiscordBot(Set<DiscordBotComponent> discordBotComponents, DiscordBotConfig config) {
         super(config);
-        this.modules = Collections.unmodifiableList(new ArrayList<DiscordBotModule>(discordBotModules));
+        this.components = Collections.unmodifiableList(new ArrayList<DiscordBotComponent>(discordBotComponents));
     }
 
     @Override
     protected Flux<ApplicationCommandRequest> commandsToRegister() {
-       return Flux.fromIterable(modules).flatMap(DiscordBotModule::commandsToRegister);
+       return Flux.fromIterable(components).flatMap(DiscordBotComponent::commandsToRegister);
     }
 
     @Override
     protected Mono<Void> handleChatInputInteractionEvent(ChatInputInteractionEvent event) {
-        return Flux.fromIterable(modules)
+        return Flux.fromIterable(components)
                 .flatMap(module->module.handleChatInputInteractionEvent(event).onErrorResume(e->{
-                    LOGGER.error("Unhandled exception in module {}: {}", module.getClass().getName(), ThrowableUtil.stackTraceToString(e));
+                    LOGGER.error("Unhandled exception in component {}: {}", module.getClass().getName(), ThrowableUtil.stackTraceToString(e));
                     return Mono.empty();
                 }))
                 .then();
@@ -47,9 +47,9 @@ public class ModuledDiscordBot extends BasicDiscordBot{
 
     @Override
     protected Mono<Void> handleMessageInteractionEvent(MessageInteractionEvent event) {
-        return Flux.fromIterable(modules)
+        return Flux.fromIterable(components)
                 .flatMap(module->module.handleMessageInteractionEvent(event).onErrorResume(e->{
-                    LOGGER.error("Unhandled exception in module {}: {}", module.getClass().getName(), ThrowableUtil.stackTraceToString(e));
+                    LOGGER.error("Unhandled exception in component {}: {}", module.getClass().getName(), ThrowableUtil.stackTraceToString(e));
                     return Mono.empty();
                 }))
                 .then();

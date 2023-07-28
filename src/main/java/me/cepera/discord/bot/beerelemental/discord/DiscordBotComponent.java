@@ -6,7 +6,7 @@ import discord4j.discordjson.json.ApplicationCommandRequest;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-public interface DiscordBotModule {
+public interface DiscordBotComponent {
 
     default Flux<ApplicationCommandRequest> commandsToRegister() {
         return Flux.empty();

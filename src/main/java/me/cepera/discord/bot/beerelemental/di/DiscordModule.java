@@ -8,12 +8,13 @@ import dagger.Module;
 import dagger.Provides;
 import dagger.multibindings.IntoSet;
 import me.cepera.discord.bot.beerelemental.discord.DiscordBot;
-import me.cepera.discord.bot.beerelemental.discord.DiscordBotModule;
-import me.cepera.discord.bot.beerelemental.discord.ModuledDiscordBot;
-import me.cepera.discord.bot.beerelemental.discord.modules.AuctionDiscordBotModule;
-import me.cepera.discord.bot.beerelemental.discord.modules.ImageToTextDiscordBotModule;
-import me.cepera.discord.bot.beerelemental.discord.modules.LocaleDiscordBotModule;
-import me.cepera.discord.bot.beerelemental.scheduling.AuctionDiscordBotModuleScheduler;
+import me.cepera.discord.bot.beerelemental.discord.DiscordBotComponent;
+import me.cepera.discord.bot.beerelemental.discord.components.AuctionDiscordBotComponent;
+import me.cepera.discord.bot.beerelemental.discord.components.ImageToTextDiscordBotComponent;
+import me.cepera.discord.bot.beerelemental.discord.components.KingdomDataDiscordBotComponent;
+import me.cepera.discord.bot.beerelemental.discord.components.LocaleDiscordBotComponent;
+import me.cepera.discord.bot.beerelemental.discord.ComplexDiscordBot;
+import me.cepera.discord.bot.beerelemental.scheduling.AuctionDiscordBotComponentScheduler;
 import me.cepera.discord.bot.beerelemental.scheduling.DiscordBotScheduler;
 
 @Module
@@ -21,32 +22,38 @@ public class DiscordModule {
 
     @Provides
     @Singleton
-    DiscordBot discordBot(ModuledDiscordBot bot, Set<DiscordBotScheduler> schedulers) {
+    DiscordBot discordBot(ComplexDiscordBot bot, Set<DiscordBotScheduler> schedulers) {
         schedulers.forEach(scheduler->scheduler.start(bot));
         return bot;
     }
 
     @Provides
     @IntoSet
-    DiscordBotModule localeDiscordBotModule(LocaleDiscordBotModule module) {
-        return module;
+    DiscordBotComponent localeDiscordBotComponent(LocaleDiscordBotComponent component) {
+        return component;
     }
 
     @Provides
     @IntoSet
-    DiscordBotModule imageToTextDiscordBotModule(ImageToTextDiscordBotModule module) {
-        return module;
+    DiscordBotComponent imageToTextDiscordBotComponent(ImageToTextDiscordBotComponent component) {
+        return component;
     }
 
     @Provides
     @IntoSet
-    DiscordBotModule auctionDiscordBotModule(AuctionDiscordBotModule module) {
-        return module;
+    DiscordBotComponent kingdomDataDiscordBotComponent(KingdomDataDiscordBotComponent component) {
+        return component;
     }
 
     @Provides
     @IntoSet
-    DiscordBotScheduler auctionDiscordBotModuleScheduler(AuctionDiscordBotModuleScheduler scheduler) {
+    DiscordBotComponent auctionDiscordBotModule(AuctionDiscordBotComponent component) {
+        return component;
+    }
+
+    @Provides
+    @IntoSet
+    DiscordBotScheduler auctionDiscordBotModuleScheduler(AuctionDiscordBotComponentScheduler scheduler) {
         return scheduler;
     }
 
