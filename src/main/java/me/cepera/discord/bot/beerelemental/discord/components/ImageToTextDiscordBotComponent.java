@@ -28,7 +28,9 @@ import io.netty.util.internal.ThrowableUtil;
 import me.cepera.discord.bot.beerelemental.discord.DiscordBotComponent;
 import me.cepera.discord.bot.beerelemental.discord.DiscordToolset;
 import me.cepera.discord.bot.beerelemental.local.ImageToTextService;
+import me.cepera.discord.bot.beerelemental.local.PermissionService;
 import me.cepera.discord.bot.beerelemental.local.lang.LanguageService;
+import me.cepera.discord.bot.beerelemental.model.Permission;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -44,17 +46,26 @@ public class ImageToTextDiscordBotComponent implements DiscordBotComponent, Disc
 
     private final LanguageService languageService;
 
+    private final PermissionService permissionService;
+
     private final ImageToTextService imageToTextService;
 
     @Inject
-    public ImageToTextDiscordBotComponent(LanguageService languageService, ImageToTextService imageToTextService) {
+    public ImageToTextDiscordBotComponent(LanguageService languageService, PermissionService permissionService,
+            ImageToTextService imageToTextService) {
         this.languageService = languageService;
+        this.permissionService = permissionService;
         this.imageToTextService = imageToTextService;
     }
 
     @Override
     public LanguageService languageService() {
         return languageService;
+    }
+
+    @Override
+    public PermissionService permissionService() {
+        return permissionService;
     }
 
     @Override
@@ -148,13 +159,17 @@ public class ImageToTextDiscordBotComponent implements DiscordBotComponent, Disc
 
         return event.deferReply()
                 .withEphemeral(false)
-                .thenMany(getAttachmentContentUrls(attachments))
-                .switchIfEmpty(event.editReply(cantGetAnyImageResponseText(event)).then(Mono.empty()))
-                .doOnNext(bytes->LOGGER.info("Start searching for nicknames on image in action {}", actionIdentity))
-                .flatMap(imageToTextService::findNicknames)
-                .collectList()
-                .map(list->new ArrayList<>(new LinkedHashSet<>(list)))
-                .flatMap(nicknames->sendFoundNicknames(event, nicknames, expanded, messageUrl.isPresent() ? Collections.emptyList() : attachedImages, messageUrl))
+                .then(handlePermissionCheck(true,
+                        hasPermission(event.getInteraction(), Permission.USE_IMAGE_TO_TEXT),
+                        simpleEditReply(event, defaultNoPermissionText(event))))
+                .flatMap(b->getAttachmentContentUrls(attachments)
+                        .switchIfEmpty(event.editReply(cantGetAnyImageResponseText(event)).then(Mono.empty()))
+                        .doOnNext(bytes->LOGGER.info("Start searching for nicknames on image in action {}", actionIdentity))
+                        .flatMapSequential(imageUrl->imageToTextService.findNicknames(imageUrl), 3)
+                        .collectList()
+                        .map(list->new ArrayList<>(new LinkedHashSet<>(list)))
+                        .flatMap(nicknames->sendFoundNicknames(event, nicknames, expanded,
+                                messageUrl.isPresent() ? Collections.emptyList() : attachedImages, messageUrl)))
                 .onErrorResume(e->{
                     LOGGER.error("Error during resolving nicknames from images. Action: {} Error: {}", actionIdentity, ThrowableUtil.stackTraceToString(e));
                     return replyError(event, this::defaultCommandErrorText, true);

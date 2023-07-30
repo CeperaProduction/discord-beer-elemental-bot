@@ -7,7 +7,7 @@ import me.cepera.discord.bot.beerelemental.discord.DiscordBot;
 
 @Singleton
 @Component(modules = {DiscordModule.class, DataModule.class, ConfigModule.class,
-        ImageToTextModule.class})
+        ImageToTextModule.class, RandomModule.class})
 public interface BaseComponent {
 
     DiscordBot getDiscordBot();

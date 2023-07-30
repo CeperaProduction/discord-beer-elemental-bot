@@ -13,6 +13,7 @@ import me.cepera.discord.bot.beerelemental.discord.components.AuctionDiscordBotC
 import me.cepera.discord.bot.beerelemental.discord.components.ImageToTextDiscordBotComponent;
 import me.cepera.discord.bot.beerelemental.discord.components.KingdomDataDiscordBotComponent;
 import me.cepera.discord.bot.beerelemental.discord.components.LocaleDiscordBotComponent;
+import me.cepera.discord.bot.beerelemental.discord.components.PermissionsDiscordBotComponent;
 import me.cepera.discord.bot.beerelemental.discord.ComplexDiscordBot;
 import me.cepera.discord.bot.beerelemental.scheduling.AuctionDiscordBotComponentScheduler;
 import me.cepera.discord.bot.beerelemental.scheduling.DiscordBotScheduler;
@@ -25,6 +26,12 @@ public class DiscordModule {
     DiscordBot discordBot(ComplexDiscordBot bot, Set<DiscordBotScheduler> schedulers) {
         schedulers.forEach(scheduler->scheduler.start(bot));
         return bot;
+    }
+
+    @Provides
+    @IntoSet
+    DiscordBotComponent permissionsDiscordBotComponent(PermissionsDiscordBotComponent component) {
+        return component;
     }
 
     @Provides

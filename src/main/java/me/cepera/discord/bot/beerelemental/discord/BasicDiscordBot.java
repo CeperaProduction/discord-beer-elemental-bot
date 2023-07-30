@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 
 import discord4j.core.DiscordClient;
 import discord4j.core.GatewayDiscordClient;
+import discord4j.core.event.domain.interaction.ChatInputAutoCompleteEvent;
 import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
 import discord4j.core.event.domain.interaction.MessageInteractionEvent;
 import discord4j.core.event.domain.lifecycle.ReadyEvent;
@@ -94,6 +95,15 @@ public abstract class BasicDiscordBot implements DiscordBot{
                 }))
         .subscribe();
 
+        client.on(ChatInputAutoCompleteEvent.class)
+        .publishOn(botActionsScheduler)
+        .flatMap(event->this.handleChatInputAutocompleteEvent(event)
+                .onErrorResume(e->{
+                    LOGGER.error("Error on handling autocompletion", e);
+                    return Mono.empty();
+                }))
+        .subscribe();
+
     }
 
     protected Mono<Void> handleReadyEvent(ReadyEvent event){
@@ -101,6 +111,10 @@ public abstract class BasicDiscordBot implements DiscordBot{
     }
 
     protected Mono<Void> handleChatInputInteractionEvent(ChatInputInteractionEvent event){
+        return Mono.empty();
+    }
+
+    protected Mono<Void> handleChatInputAutocompleteEvent(ChatInputAutoCompleteEvent event){
         return Mono.empty();
     }
 

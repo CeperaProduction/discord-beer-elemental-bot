@@ -9,15 +9,17 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import discord4j.core.event.domain.interaction.ApplicationCommandInteractionEvent;
+import discord4j.core.event.domain.interaction.ChatInputAutoCompleteEvent;
 import discord4j.core.object.command.Interaction;
 import discord4j.core.object.entity.Attachment;
 import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.Member;
 import discord4j.core.spec.InteractionApplicationCommandCallbackSpec;
 import discord4j.rest.util.AllowedMentions;
-import discord4j.rest.util.Permission;
+import me.cepera.discord.bot.beerelemental.local.PermissionService;
 import me.cepera.discord.bot.beerelemental.local.lang.LanguageService;
 import me.cepera.discord.bot.beerelemental.local.lang.Translatable;
+import me.cepera.discord.bot.beerelemental.model.Permission;
 import me.cepera.discord.bot.beerelemental.remote.RemoteService;
 import me.cepera.discord.bot.beerelemental.remote.SimpleRemoteService;
 import reactor.core.publisher.Mono;
@@ -26,6 +28,8 @@ public interface DiscordToolset {
 
     LanguageService languageService();
 
+    PermissionService permissionService();
+
     RemoteService defaultHttpService = new SimpleRemoteService();
 
     default RemoteService httpService() {
@@ -33,6 +37,14 @@ public interface DiscordToolset {
     }
 
     default String getCommandName(ApplicationCommandInteractionEvent event) {
+        String command = event.getCommandName();
+        if(command.startsWith("/")) {
+            command = command.substring(1);
+        }
+        return command.toLowerCase();
+    }
+
+    default String getCommandName(ChatInputAutoCompleteEvent event) {
         String command = event.getCommandName();
         if(command.startsWith("/")) {
             command = command.substring(1);
@@ -84,6 +96,14 @@ public interface DiscordToolset {
         return localization(event.getInteraction().getUserLocale(), "message.command.error");
     }
 
+    default String defaultNoPermissionText(ApplicationCommandInteractionEvent event) {
+        return localization(event.getInteraction().getUserLocale(), "message.command.no_permission");
+    }
+
+    default String defaultOnlyForAdminText(ApplicationCommandInteractionEvent event) {
+        return localization(event.getInteraction().getUserLocale(), "message.command.only_for_administrator");
+    }
+
     default Mono<Void> replyError(ApplicationCommandInteractionEvent event, Function<ApplicationCommandInteractionEvent, String> messageFactory, boolean edit){
         if(edit) {
             return event.editReply(messageFactory.apply(event)).then();
@@ -95,23 +115,25 @@ public interface DiscordToolset {
         }
     }
 
-    default Mono<Boolean> isCalledByAdmin(Interaction interaction) {
-        return isCalledByAdmin(interaction, Member::getGuild);
+    default Mono<Boolean> hasPermission(Guild guild, Member member, Permission permission){
+        return permissionService().hasPermission(guild, member, permission);
     }
 
-    default Mono<Boolean> isCalledByAdmin(Interaction interaction, Guild guild) {
-        return isCalledByAdmin(interaction, member->Mono.just(guild));
-    }
-
-    default Mono<Boolean> isCalledByAdmin(Interaction interaction, Function<Member, Mono<Guild>> guildReceiverGetter) {
+    default Mono<Boolean> hasPermission(Interaction interaction, Guild guild, Permission permission){
         return Mono.justOrEmpty(interaction.getMember())
-                .flatMap(member->member.getHighestRole()
-                                .filter(role->role.getPermissions().contains(Permission.ADMINISTRATOR))
-                                .map(r->true)
-                                .switchIfEmpty(guildReceiverGetter.apply(member)
-                                        .filter(g->g.getOwnerId().equals(member.getId()))
-                                        .map(g->true)))
-                .switchIfEmpty(Mono.just(false));
+                .flatMap(member->permissionService().hasPermission(guild, member, permission));
+    }
+
+    default Mono<Boolean> hasPermission(Interaction interaction, Permission permission){
+        return Mono.zip(Mono.justOrEmpty(interaction.getMember()), interaction.getGuild())
+                .flatMap(tuple->permissionService().hasPermission(tuple.getT2(), tuple.getT1(), permission));
+    }
+
+    default <T> Mono<T> handlePermissionCheck(T chainItem, Mono<Boolean> permissionCheck, Mono<?> replyHandler){
+        return permissionCheck
+                .filter(r->r)
+                .map(r->chainItem)
+                .switchIfEmpty(Mono.defer(()->replyHandler).then(Mono.empty()));
     }
 
     default <T> Mono<T> simpleReply(ApplicationCommandInteractionEvent event, String content) {

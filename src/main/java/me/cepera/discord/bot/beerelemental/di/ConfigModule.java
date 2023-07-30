@@ -7,6 +7,7 @@ import dagger.Provides;
 import me.cepera.discord.bot.beerelemental.config.ConfigReader;
 import me.cepera.discord.bot.beerelemental.config.DiscordBotConfig;
 import me.cepera.discord.bot.beerelemental.config.OCRConfig;
+import me.cepera.discord.bot.beerelemental.config.RandomConfig;
 
 @Module
 public class ConfigModule {
@@ -27,6 +28,12 @@ public class ConfigModule {
     @Singleton
     OCRConfig ocrConfig(ConfigReader reader) {
         return reader.readConfig("ocr", OCRConfig.class);
+    }
+
+    @Provides
+    @Singleton
+    RandomConfig randomConfig(ConfigReader reader) {
+        return reader.readConfig("random", RandomConfig.class);
     }
 
 }

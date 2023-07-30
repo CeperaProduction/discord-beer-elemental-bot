@@ -4,12 +4,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.function.BiFunction;
 
 import javax.inject.Inject;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import discord4j.core.event.domain.interaction.ChatInputAutoCompleteEvent;
 import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
 import discord4j.core.event.domain.interaction.MessageInteractionEvent;
 import discord4j.discordjson.json.ApplicationCommandRequest;
@@ -37,19 +39,24 @@ public class ComplexDiscordBot extends BasicDiscordBot{
 
     @Override
     protected Mono<Void> handleChatInputInteractionEvent(ChatInputInteractionEvent event) {
-        return Flux.fromIterable(components)
-                .flatMap(module->module.handleChatInputInteractionEvent(event).onErrorResume(e->{
-                    LOGGER.error("Unhandled exception in component {}: {}", module.getClass().getName(), ThrowableUtil.stackTraceToString(e));
-                    return Mono.empty();
-                }))
-                .then();
+        return handeForEachComponent(event, DiscordBotComponent::handleChatInputInteractionEvent);
     }
 
     @Override
     protected Mono<Void> handleMessageInteractionEvent(MessageInteractionEvent event) {
+        return handeForEachComponent(event, DiscordBotComponent::handleMessageInteractionEvent);
+    }
+
+    @Override
+    protected Mono<Void> handleChatInputAutocompleteEvent(ChatInputAutoCompleteEvent event) {
+        return handeForEachComponent(event, DiscordBotComponent::handleChatInputAutocompleteEvent);
+    }
+
+    private <T> Mono<Void> handeForEachComponent(T event, BiFunction<DiscordBotComponent, T, Mono<Void>> componentHandler){
         return Flux.fromIterable(components)
-                .flatMap(module->module.handleMessageInteractionEvent(event).onErrorResume(e->{
-                    LOGGER.error("Unhandled exception in component {}: {}", module.getClass().getName(), ThrowableUtil.stackTraceToString(e));
+                .flatMap(component->componentHandler.apply(component, event).onErrorResume(e->{
+                    LOGGER.error("Unhandled exception in component {}: {}",
+                            component.getClass().getName(), ThrowableUtil.stackTraceToString(e));
                     return Mono.empty();
                 }))
                 .then();

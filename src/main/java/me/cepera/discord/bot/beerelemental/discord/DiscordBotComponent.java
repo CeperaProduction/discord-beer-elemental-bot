@@ -1,5 +1,6 @@
 package me.cepera.discord.bot.beerelemental.discord;
 
+import discord4j.core.event.domain.interaction.ChatInputAutoCompleteEvent;
 import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
 import discord4j.core.event.domain.interaction.MessageInteractionEvent;
 import discord4j.discordjson.json.ApplicationCommandRequest;
@@ -17,6 +18,10 @@ public interface DiscordBotComponent {
     }
 
     default Mono<Void> handleMessageInteractionEvent(MessageInteractionEvent event) {
+        return Mono.empty();
+    }
+
+    default Mono<Void> handleChatInputAutocompleteEvent(ChatInputAutoCompleteEvent event){
         return Mono.empty();
     }
 

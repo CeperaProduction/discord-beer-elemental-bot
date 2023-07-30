@@ -12,18 +12,22 @@ import org.apache.logging.log4j.Logger;
 
 import discord4j.common.util.Snowflake;
 import discord4j.core.event.domain.interaction.ApplicationCommandInteractionEvent;
+import discord4j.core.event.domain.interaction.ChatInputAutoCompleteEvent;
 import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
 import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.Role;
 import discord4j.core.object.entity.User;
+import discord4j.discordjson.json.ApplicationCommandOptionChoiceData;
 import discord4j.discordjson.json.ApplicationCommandOptionData;
 import discord4j.discordjson.json.ApplicationCommandRequest;
 import io.netty.util.internal.ThrowableUtil;
 import me.cepera.discord.bot.beerelemental.discord.DiscordBotComponent;
 import me.cepera.discord.bot.beerelemental.discord.DiscordToolset;
+import me.cepera.discord.bot.beerelemental.local.PermissionService;
 import me.cepera.discord.bot.beerelemental.local.lang.LanguageService;
 import me.cepera.discord.bot.beerelemental.model.Kingdom;
 import me.cepera.discord.bot.beerelemental.model.KingdomMember;
+import me.cepera.discord.bot.beerelemental.model.Permission;
 import me.cepera.discord.bot.beerelemental.repository.KingdomMemberRepository;
 import me.cepera.discord.bot.beerelemental.repository.KingdomRepository;
 import reactor.core.publisher.Flux;
@@ -48,14 +52,17 @@ public class KingdomDataDiscordBotComponent implements DiscordBotComponent, Disc
 
     private final LanguageService languageService;
 
+    private final PermissionService permissionService;
+
     private final KingdomRepository kingdomRepository;
 
     private final KingdomMemberRepository memberRepository;
 
     @Inject
-    public KingdomDataDiscordBotComponent(LanguageService languageService, KingdomRepository kingdomRepository,
-            KingdomMemberRepository memberRepository) {
+    public KingdomDataDiscordBotComponent(LanguageService languageService, PermissionService permissionService,
+            KingdomRepository kingdomRepository, KingdomMemberRepository memberRepository) {
         this.languageService = languageService;
+        this.permissionService = permissionService;
         this.kingdomRepository = kingdomRepository;
         this.memberRepository = memberRepository;
     }
@@ -63,6 +70,11 @@ public class KingdomDataDiscordBotComponent implements DiscordBotComponent, Disc
     @Override
     public LanguageService languageService() {
         return languageService;
+    }
+
+    @Override
+    public PermissionService permissionService() {
+        return permissionService;
     }
 
     @Override
@@ -79,6 +91,7 @@ public class KingdomDataDiscordBotComponent implements DiscordBotComponent, Disc
                             .description(localization(null, "command.kingdom.option.name.description"))
                             .descriptionLocalizationsOrNull(localization("command.kingdom.option.name.description"))
                             .required(true)
+                            .autocomplete(true)
                             .type(3)
                             .build())
                     .addOption(ApplicationCommandOptionData.builder()
@@ -126,6 +139,7 @@ public class KingdomDataDiscordBotComponent implements DiscordBotComponent, Disc
                             .description(localization(null, "command.player.option.kingdom.description"))
                             .descriptionLocalizationsOrNull(localization("command.player.option.kingdom.description"))
                             .required(false)
+                            .autocomplete(true)
                             .type(3)
                             .build())
                     .addOption(ApplicationCommandOptionData.builder()
@@ -193,6 +207,38 @@ public class KingdomDataDiscordBotComponent implements DiscordBotComponent, Disc
         }
     }
 
+    @Override
+    public Mono<Void> handleChatInputAutocompleteEvent(ChatInputAutoCompleteEvent event) {
+        String commandName = getCommandName(event);
+        if(commandName.equals(COMMAND_KINGDOM)) {
+            if(!event.getFocusedOption().getName().equals(COMMAND_KINGDOM_OPTION_NAME)) {
+                return Mono.empty();
+            }
+        }else if(commandName.equals(COMMAND_PLAYER)) {
+            if(!event.getFocusedOption().getName().equals(COMMAND_PLAYER_OPTION_KINGDOM)) {
+                return Mono.empty();
+            }
+        }else {
+            return Mono.empty();
+        }
+        return event.getInteraction().getGuild()
+                .flatMap(guild->handleKingdomAutocomplete(event, guild));
+    }
+
+    private Mono<Void> handleKingdomAutocomplete(ChatInputAutoCompleteEvent event, Guild guild){
+
+        return kingdomRepository.getKingdoms(guild.getId().asLong())
+                .map(Kingdom::getName)
+                .filter(name->event.getFocusedOption().getValue()
+                        .map(val->name.toLowerCase().startsWith(val.asString().toLowerCase()))
+                        .orElse(true))
+                .map(name->ApplicationCommandOptionChoiceData.builder().name(name).value(name).build())
+                .cast(ApplicationCommandOptionChoiceData.class)
+                .collectList()
+                .flatMap(choices->event.respondWithSuggestions(choices));
+
+    }
+
     private Mono<Void> handleKingdomCommand(ChatInputInteractionEvent event, String name,
             Optional<String> maybeNewName, Mono<Role> maybeRole){
 
@@ -216,6 +262,7 @@ public class KingdomDataDiscordBotComponent implements DiscordBotComponent, Disc
     private Mono<Void> sendKingdomInfo(ChatInputInteractionEvent event, String name){
         return event.getInteraction().getGuild()
                 .switchIfEmpty(simpleEditReply(event, kingdomOnlyForServerResponseText(event)))
+                .flatMap(guild->permissionCheckMap(event, guild, Permission.SHOW_KINGDOM_AND_MEMBERS_DATA))
                 .flatMap(guild->kingdomRepository.getKingdomByName(guild.getId().asLong(), name)
                         .switchIfEmpty(simpleEditReply(event, kingdomNotFoundResponseText(event)))
                         .zipWhen(kd->guild.getRoleById(Snowflake.of(kd.getRoleId()))
@@ -230,10 +277,7 @@ public class KingdomDataDiscordBotComponent implements DiscordBotComponent, Disc
             Optional<String> maybeNewName, Optional<Role> maybeRole){
         return event.getInteraction().getGuild()
                 .switchIfEmpty(simpleEditReply(event, kingdomOnlyForServerResponseText(event)))
-                .flatMap(guild->isCalledByAdmin(event.getInteraction(), guild)
-                        .filter(r->r)
-                        .map(r->guild)
-                        .switchIfEmpty(simpleEditReply(event, kingdomOnlyForAdministratorResponseText(event))))
+                .flatMap(guild->permissionCheckMap(event, guild, Permission.MANAGE_KINGDOM))
                 .flatMap(guild->kingdomRepository.getKingdomByName(guild.getId().asLong(), name)
                         .switchIfEmpty(Mono.justOrEmpty(maybeRole)
                                 .map(role->{
@@ -263,17 +307,18 @@ public class KingdomDataDiscordBotComponent implements DiscordBotComponent, Disc
                 .switchIfEmpty(simpleEditReply(event, playerOnlyForServerResponseText(event)))
                 .flatMap(guild->{
                     if(delete) {
-                        return adminCheckFlatMap(event, guild)
+                        return permissionCheckMap(event, guild, Permission.MANAGE_KINGDOM_MEMBERS)
                                 .flatMap(g->deletePlayer(event, actionIdentity, guild, maybeName, maybeKingdom));
                     }else {
                         return maybeUser.map(Optional::of).switchIfEmpty(Mono.fromSupplier(Optional::empty))
                                 .flatMap(optUser->{
                                     if(optUser.isPresent() && maybeName.isPresent() || maybeNewName.isPresent()
                                             || maybeName.isPresent() && maybeKingdom.isPresent()) {
-                                        return adminCheckFlatMap(event, guild)
+                                        return permissionCheckMap(event, guild, Permission.MANAGE_KINGDOM_MEMBERS)
                                                 .flatMap(g->setPlayerData(event, actionIdentity, guild, maybeName, maybeKingdom, maybeNewName, optUser));
                                     }else {
-                                        return sendPlayerInfo(event, guild, maybeName, optUser);
+                                        return permissionCheckMap(event, guild, Permission.SHOW_KINGDOM_AND_MEMBERS_DATA)
+                                                .flatMap(g->sendPlayerInfo(event, guild, maybeName, optUser));
                                     }
                                 });
                     }
@@ -285,11 +330,10 @@ public class KingdomDataDiscordBotComponent implements DiscordBotComponent, Disc
                 });
     }
 
-    private Mono<Guild> adminCheckFlatMap(ApplicationCommandInteractionEvent event, Guild guild){
-        return isCalledByAdmin(event.getInteraction(), guild)
-                .filter(r->r)
-                .map(r->guild)
-        .switchIfEmpty(simpleEditReply(event, playerOnlyForAdministratorResponseText(event)));
+    private Mono<Guild> permissionCheckMap(ApplicationCommandInteractionEvent event, Guild guild, Permission permission){
+        return handlePermissionCheck(guild,
+                hasPermission(event.getInteraction(), guild, permission),
+                simpleEditReply(event, defaultNoPermissionText(event)));
     }
 
     private Mono<Void> sendPlayerInfo(ChatInputInteractionEvent event, Guild guild,
@@ -377,10 +421,6 @@ public class KingdomDataDiscordBotComponent implements DiscordBotComponent, Disc
         return localization(event.getInteraction().getUserLocale(), "message.kingdom.saved", "kingdom", kingdom.getName());
     }
 
-    private String kingdomOnlyForAdministratorResponseText(ApplicationCommandInteractionEvent event) {
-        return localization(event.getInteraction().getUserLocale(), "message.kingdom.only_for_administrator");
-    }
-
     private String kingdomOnlyForServerResponseText(ApplicationCommandInteractionEvent event) {
         return localization(event.getInteraction().getUserLocale(), "message.kingdom.only_in_channel");
     }
@@ -400,10 +440,6 @@ public class KingdomDataDiscordBotComponent implements DiscordBotComponent, Disc
 
     private String playerSavedResponseText(ApplicationCommandInteractionEvent event, Kingdom kingdom, KingdomMember member) {
         return localization(event.getInteraction().getUserLocale(), "message.player.saved", "kingdom", kingdom.getName(), "member", member.getName());
-    }
-
-    private String playerOnlyForAdministratorResponseText(ApplicationCommandInteractionEvent event) {
-        return localization(event.getInteraction().getUserLocale(), "message.player.only_for_administrator");
     }
 
     private String playerOnlyForServerResponseText(ApplicationCommandInteractionEvent event) {

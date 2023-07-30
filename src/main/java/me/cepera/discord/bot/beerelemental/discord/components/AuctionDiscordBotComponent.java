@@ -7,11 +7,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Random;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -27,7 +26,6 @@ import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.Role;
 import discord4j.core.object.entity.channel.MessageChannel;
-import discord4j.core.spec.InteractionCallbackSpec;
 import discord4j.core.spec.MessageCreateFields;
 import discord4j.core.spec.MessageCreateSpec;
 import discord4j.discordjson.Id;
@@ -44,10 +42,13 @@ import io.netty.util.internal.ThrowableUtil;
 import me.cepera.discord.bot.beerelemental.discord.DiscordBot;
 import me.cepera.discord.bot.beerelemental.discord.DiscordBotComponent;
 import me.cepera.discord.bot.beerelemental.discord.DiscordToolset;
+import me.cepera.discord.bot.beerelemental.local.PermissionService;
+import me.cepera.discord.bot.beerelemental.local.RandomService;
 import me.cepera.discord.bot.beerelemental.local.lang.LanguageService;
 import me.cepera.discord.bot.beerelemental.model.ActiveAuction;
 import me.cepera.discord.bot.beerelemental.model.GuildLocale;
 import me.cepera.discord.bot.beerelemental.model.KingdomMember;
+import me.cepera.discord.bot.beerelemental.model.Permission;
 import me.cepera.discord.bot.beerelemental.repository.ActiveAuctionRepository;
 import me.cepera.discord.bot.beerelemental.repository.GuildLocaleRepository;
 import me.cepera.discord.bot.beerelemental.repository.KingdomMemberRepository;
@@ -72,6 +73,8 @@ public class AuctionDiscordBotComponent implements DiscordBotComponent, DiscordT
 
     private final LanguageService languageService;
 
+    private final PermissionService permissionService;
+
     private final ActiveAuctionRepository activeAuctionRepository;
 
     private final GuildLocaleRepository guildLocaleRepository;
@@ -80,20 +83,30 @@ public class AuctionDiscordBotComponent implements DiscordBotComponent, DiscordT
 
     private final KingdomMemberRepository kingdomMemberRepository;
 
+    private final RandomService randomService;
+
     @Inject
-    public AuctionDiscordBotComponent(LanguageService languageService, ActiveAuctionRepository activeAuctionRepository,
-            GuildLocaleRepository guildLocaleRepository, KingdomRepository kingdomRepository,
-            KingdomMemberRepository kingdomMemberRepository) {
+    public AuctionDiscordBotComponent(LanguageService languageService, PermissionService permissionService,
+            ActiveAuctionRepository activeAuctionRepository, GuildLocaleRepository guildLocaleRepository,
+            KingdomRepository kingdomRepository, KingdomMemberRepository kingdomMemberRepository,
+            RandomService randomService) {
         this.languageService = languageService;
+        this.permissionService = permissionService;
         this.activeAuctionRepository = activeAuctionRepository;
         this.guildLocaleRepository = guildLocaleRepository;
         this.kingdomRepository = kingdomRepository;
         this.kingdomMemberRepository = kingdomMemberRepository;
+        this.randomService = randomService;
     }
 
     @Override
     public LanguageService languageService() {
         return languageService;
+    }
+
+    @Override
+    public PermissionService permissionService() {
+        return permissionService;
     }
 
     @Override
@@ -196,12 +209,14 @@ public class AuctionDiscordBotComponent implements DiscordBotComponent, DiscordT
             }
         }
 
-        return event.deferReply(InteractionCallbackSpec.builder()
-                    .ephemeral(false)
-                    .build())
+        return event.deferReply()
+                .withEphemeral(false)
                 .then(event.getInteraction().getGuild())
                 .switchIfEmpty(Mono.defer(()->
                     replyError(event, this::onlyForChannelResponseText, true).then(Mono.empty())))
+                .flatMap(guild->handlePermissionCheck(guild,
+                        hasPermission(event.getInteraction(), guild, Permission.START_AUCTION),
+                        simpleEditReply(event, defaultNoPermissionText(event))))
                 .zipWith(event.getInteraction().getChannel().switchIfEmpty(Mono.defer(()->
                     replyError(event, this::onlyForChannelResponseText, true).then(Mono.empty()))))
                 .zipWith(maybeRole.switchIfEmpty(Mono.defer(()->
@@ -257,7 +272,7 @@ public class AuctionDiscordBotComponent implements DiscordBotComponent, DiscordT
                                                 .orElseGet(()->new AuctionParticipant(Optional.of(nick), Optional.empty()))))
                                 .collectList()
                                 .filter(list->!list.isEmpty())
-                                .map(participants->getParticipantsAndWinnersDisplays(participants, count))
+                                .flatMap(participants->getParticipantsAndWinnersDisplays(participants, count))
                                 .zipWhen(tuple->guildLocaleRepository.getGuildLocale(guild.getId().asLong()),
                                         (tuple, locale)->Tuples.of(tuple.getT1(), tuple.getT2(), locale))
                                 .flatMap(tuple->event.createFollowup(role.getMention()+"\n"
@@ -303,11 +318,13 @@ public class AuctionDiscordBotComponent implements DiscordBotComponent, DiscordT
 
     public Mono<Void> completeEndedAuctions(DiscordBot bot){
         return activeAuctionRepository.getEndedActiveAuctions()
-                .flatMap(auction->completeActiveAuction(bot, auction))
+                .flatMap(auction->activeAuctionRepository.deleteAuction(auction).then(Mono.just(auction)))
+                .flatMap(auction->calculateAndSendActiveAuction(bot, auction)
+                        .then(Mono.fromRunnable(()->LOGGER.info("Auction {} completed.", auction)).then()))
                 .then();
     }
 
-    private Mono<Void> completeActiveAuction(DiscordBot bot, ActiveAuction auction){
+    private Mono<Void> calculateAndSendActiveAuction(DiscordBot bot, ActiveAuction auction){
 
         RestGuild guild = bot.getDiscordClient().getGuildById(Snowflake.of(auction.getGuildId()));
 
@@ -318,7 +335,8 @@ public class AuctionDiscordBotComponent implements DiscordBotComponent, DiscordT
         return message.getData()
             .flatMap(messageData->Mono.justOrEmpty(messageData.reactions().toOptional()))
             .flatMapIterable(list->list)
-            .flatMap(reaction->Mono.justOrEmpty(reaction.emoji().name()))
+            .flatMap(reaction->Mono.justOrEmpty(reaction.emoji().name().map(name->reaction.emoji().id()
+                    .map(id->name+":"+id).orElse(name))))
             .flatMap(reaction->bot.getDiscordClient().getChannelService()
                     .getReactions(auction.getChannelId(), auction.getMessageId(), reaction, Collections.emptyMap()))
             .map(userData->userData.id().asLong())
@@ -339,7 +357,7 @@ public class AuctionDiscordBotComponent implements DiscordBotComponent, DiscordT
                     .map(members->new AuctionParticipant(members.getT2().map(KingdomMember::getName), Optional.of(members.getT1().user().id().asLong()))))
             .collectList()
             .filter(list->!list.isEmpty())
-            .map(participants->getParticipantsAndWinnersDisplays(participants, auction.getCount()))
+            .flatMap(participants->getParticipantsAndWinnersDisplays(participants, auction.getCount()))
             .zipWith(guild.getData(), (tuple, g)->Tuples.of(tuple.getT1(), tuple.getT2(), g))
             .zipWhen(tuple->guildLocaleRepository.getGuildLocale(tuple.getT3().id().asLong()),
                     (tuple, locale)->Tuples.of(tuple.getT1(), tuple.getT2(), tuple.getT3(), locale))
@@ -381,31 +399,28 @@ public class AuctionDiscordBotComponent implements DiscordBotComponent, DiscordT
                             .build())))
             .onErrorResume(e->Mono.fromRunnable(()->
                 LOGGER.error("Error while auction completing auction {} Error {}", auction, ThrowableUtil.stackTraceToString(e))))
-            .then(activeAuctionRepository.deleteAuction(auction).then(Mono.fromRunnable(()->
-                LOGGER.info("Auction {} completed.", auction)).then()));
+            .then(Mono.empty());
     }
 
-    private Tuple2<List<String>, List<String>> getParticipantsAndWinnersDisplays(List<AuctionParticipant> participants, int lotsCount){
-        Random rand = new Random();
-        List<AuctionParticipant> possible = new ArrayList<>(participants);
-        Set<AuctionParticipant> winnedSet = new HashSet<>();
-        while(!possible.isEmpty() && winnedSet.size() < lotsCount) {
-            int index = rand.nextInt(possible.size() * 10) / 10;
-            winnedSet.add(possible.remove(index));
-        }
-        List<String> participantDisplayNames = new ArrayList<String>();
-        List<String> winnersDisplayNames = participants.stream()
-                .filter(winnedSet::contains)
-                .map(participant->"> "+participant.toString()).collect(Collectors.toList());
-        for(int i = 0; i < participants.size(); ++i) {
-            AuctionParticipant member = participants.get(i);
-            if(winnedSet.contains(member)) {
-                participantDisplayNames.add(String.format("> %d. %s", i+1, member));
-            }else {
-                participantDisplayNames.add(String.format("%d. %s", i+1, member));
-            }
-        }
-        return Tuples.of(participantDisplayNames, winnersDisplayNames);
+    private Mono<Tuple2<List<String>, List<String>>> getParticipantsAndWinnersDisplays(List<AuctionParticipant> participants, int lotsCount){
+
+        return randomService.getRandomIntegers(0, participants.size(), lotsCount, true)
+                .map(list->new HashSet<>(list))
+                .map(idsSet->{
+                    List<String> participantDisplayNames = new LinkedList<String>();
+                    List<String> winnersDisplayNames = new LinkedList<String>();
+                    for(int i = 0; i < participants.size(); ++i) {
+                        AuctionParticipant member = participants.get(i);
+                        if(idsSet.contains(i)) {
+                            participantDisplayNames.add(String.format("> %d. %s", i+1, member));
+                            winnersDisplayNames.add(String.format("> %s", member));
+                        }else {
+                            participantDisplayNames.add(String.format("%d. %s", i+1, member));
+                        }
+                    }
+                    return Tuples.of(participantDisplayNames, winnersDisplayNames);
+                });
+
     }
 
 

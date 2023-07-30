@@ -44,8 +44,14 @@
 	  "command.player.option.user.description": "Аккаунт игрока в дискорде",
 	  "command.player.option.delete": "удалить",
 	  "command.player.option.delete.description": "Если установлено, то игрок будет удален из королевства",
-
-
+	  "command.permission": "доступ",
+	  "command.permission.description": "Управление доступом к фишкам бота",
+	  "command.permission.option.permission": "доступ",
+	  "command.permission.option.permission.description": "Функция бота, которой нужно настроить доступ",
+	  "command.permission.option.role": "роль",
+	  "command.permission.option.role.description": "Роль, для которой нужно настроить доступ",
+	  "command.permission.option.value": "значение",
+	  "command.permission.option.value.description": "Разрешить или запретить действие",
 
 	  "command.message.nicknames": "Никнеймы",
 
@@ -81,8 +87,22 @@
 	  "message.player.kingdom_not_found": "Королевство не найдено",
 	  "message.player.not_found": "Данные игрока не найдены",
 	  "message.player.name_or_user_required": "Необходимо указать либо ник игрока, либо его дискорд",
+	  "message.permission.set.true": "Роль {role} теперь имеет доступ к \"{permission}\"",
+	  "message.permission.set.false": "Роль {role} больше не имеет доступ к \"{permission}\"",
+	  "message.permission.only_in_channel": "Управление доступом доступно только на сервере",
+	  "message.permission.admin_only": "Только администраторы",
+	  "message.permission.role_not_found": "Не удалось определить целевую роль",
+	  "message.permission.all_arguments_required": "Для изменения доступа нужно указать все аргументы",
 
-	  "message.command.error": "Во время выполнения команды произошла ошибка"
+	  "message.command.error": "Во время выполнения команды произошла ошибка",
+	  "message.command.no_permission": "Это действие вам не доступно",
+	  "message.command.only_for_administrator": "Это действие доступно только администратору",
+
+	  "permission.start_auction": "Запуск аукциона",
+	  "permission.use_image_to_text": "Использование функций распознавания текста на изображениях",
+	  "permission.manage_kingdom": "Управление данными королевств",
+	  "permission.manage_kingdom_members": "Управление данными участников королевств",
+	  "permission.show_kingdom_and_members_data": "Просмотр данных королевств и участников"
 
 	}
 }

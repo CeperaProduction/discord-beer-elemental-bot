@@ -11,10 +11,12 @@ import me.cepera.discord.bot.beerelemental.repository.ActiveAuctionRepository;
 import me.cepera.discord.bot.beerelemental.repository.GuildLocaleRepository;
 import me.cepera.discord.bot.beerelemental.repository.KingdomMemberRepository;
 import me.cepera.discord.bot.beerelemental.repository.KingdomRepository;
+import me.cepera.discord.bot.beerelemental.repository.RolePermissionRepository;
 import me.cepera.discord.bot.beerelemental.repository.sqlite.SQLiteActiveAuctionRepository;
 import me.cepera.discord.bot.beerelemental.repository.sqlite.SQLiteGuildLocaleRepository;
 import me.cepera.discord.bot.beerelemental.repository.sqlite.SQLiteKingdomMemberRepository;
 import me.cepera.discord.bot.beerelemental.repository.sqlite.SQLiteKingdomRepository;
+import me.cepera.discord.bot.beerelemental.repository.sqlite.SQLiteRolePermissionRepository;
 import me.cepera.discord.bot.beerelemental.repository.sqlite.db.SQLiteDatabase;
 
 @Module
@@ -29,16 +31,16 @@ public class DataModule {
 
     @Provides
     @Singleton
-    @Named("guildLocaleDatabase")
-    SQLiteDatabase guildLocaleDatabase() {
-        return new SQLiteDatabase(Paths.get("data", "guild_locales.sqlite"));
+    @Named("kingdomDatabase")
+    SQLiteDatabase kingdomDatabase() {
+        return new SQLiteDatabase(Paths.get("data", "kingdoms.sqlite"));
     }
 
     @Provides
     @Singleton
-    @Named("kingdomDatabase")
-    SQLiteDatabase kingdomDatabase() {
-        return new SQLiteDatabase(Paths.get("data", "kingdoms.sqlite"));
+    @Named("guildSettingsDatabase")
+    SQLiteDatabase permissionsDatabase() {
+        return new SQLiteDatabase(Paths.get("data", "guild_settings.sqlite"));
     }
 
     @Provides
@@ -49,7 +51,7 @@ public class DataModule {
 
     @Provides
     @Singleton
-    GuildLocaleRepository guildLocaleRepository(@Named("guildLocaleDatabase") SQLiteDatabase database) {
+    GuildLocaleRepository guildLocaleRepository(@Named("guildSettingsDatabase") SQLiteDatabase database) {
         return new SQLiteGuildLocaleRepository(database);
     }
 
@@ -63,6 +65,12 @@ public class DataModule {
     @Singleton
     KingdomMemberRepository kingdomMemberRepository(@Named("kingdomDatabase") SQLiteDatabase database) {
         return new SQLiteKingdomMemberRepository(database);
+    }
+
+    @Provides
+    @Singleton
+    RolePermissionRepository rolePermissionRepository(@Named("guildSettingsDatabase") SQLiteDatabase database) {
+        return new SQLiteRolePermissionRepository(database);
     }
 
 }

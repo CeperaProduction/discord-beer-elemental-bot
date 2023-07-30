@@ -16,6 +16,7 @@ import discord4j.discordjson.json.ApplicationCommandRequest;
 import io.netty.util.internal.ThrowableUtil;
 import me.cepera.discord.bot.beerelemental.discord.DiscordBotComponent;
 import me.cepera.discord.bot.beerelemental.discord.DiscordToolset;
+import me.cepera.discord.bot.beerelemental.local.PermissionService;
 import me.cepera.discord.bot.beerelemental.local.lang.LanguageService;
 import me.cepera.discord.bot.beerelemental.model.GuildLocale;
 import me.cepera.discord.bot.beerelemental.repository.GuildLocaleRepository;
@@ -27,21 +28,30 @@ public class LocaleDiscordBotComponent implements DiscordBotComponent, DiscordTo
     private static final Logger LOGGER = LogManager.getLogger(LocaleDiscordBotComponent.class);
 
     public static final String COMMAND_LOCALE= "locale";
-    public static final String COMMAND_OPTION_LOCALE = "locale";;
+    public static final String COMMAND_OPTION_LOCALE = "locale";
 
     private final LanguageService languageService;
+
+    private final PermissionService permissionService;
 
     private final GuildLocaleRepository guildLocaleRepository;
 
     @Inject
-    public LocaleDiscordBotComponent(LanguageService languageService, GuildLocaleRepository guildLocaleRepository) {
+    public LocaleDiscordBotComponent(LanguageService languageService, PermissionService permissionService,
+            GuildLocaleRepository guildLocaleRepository) {
         this.languageService = languageService;
+        this.permissionService = permissionService;
         this.guildLocaleRepository = guildLocaleRepository;
     }
 
     @Override
     public LanguageService languageService() {
         return languageService;
+    }
+
+    @Override
+    public PermissionService permissionService() {
+        return permissionService;
     }
 
     @Override
@@ -92,13 +102,10 @@ public class LocaleDiscordBotComponent implements DiscordBotComponent, DiscordTo
                 .switchIfEmpty(event.reply()
                         .withContent(onlyForServerResponseText(event))
                         .then(Mono.empty()))
-                .flatMap(guild->isCalledByAdmin(event.getInteraction(), guild)
-                        .filter(r->r)
-                        .map(r->guild)
-                        .switchIfEmpty(event.reply()
-                                .withContent(onlyForAdministratorResponseText(event))
-                                .withEphemeral(true)
-                                .then(Mono.empty())))
+                .flatMap(guild->handlePermissionCheck(guild,
+                        Mono.justOrEmpty(event.getInteraction().getMember())
+                            .flatMap(member->permissionService().isAdmin(guild, member)),
+                        simpleReply(event, defaultOnlyForAdminText(event), true)))
                 .flatMap(guild->guildLocaleRepository.setGuildLocale(guild.getId().asLong(), locale)
                         .then(Mono.fromRunnable(()->LOGGER.info("Locale of guild {} set to {}", guild.getId().asLong(), locale)))
                         .then(event.reply()
@@ -117,10 +124,6 @@ public class LocaleDiscordBotComponent implements DiscordBotComponent, DiscordTo
 
     private String onlyForServerResponseText(ApplicationCommandInteractionEvent event) {
         return localization(event.getInteraction().getUserLocale(), "message.locale.only_in_channel");
-    }
-
-    private String onlyForAdministratorResponseText(ApplicationCommandInteractionEvent event) {
-        return localization(event.getInteraction().getUserLocale(), "message.locale.only_for_administrator");
     }
 
 }

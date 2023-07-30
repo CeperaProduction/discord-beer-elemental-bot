@@ -44,6 +44,14 @@
 	  "command.player.option.user.description": "Player's discord account",
 	  "command.player.option.delete": "delete",
 	  "command.player.option.delete.description": "If this flag is set, player data will be removed",
+	  "command.permission": "access",
+	  "command.permission.description": "Bot features access management",
+	  "command.permission.option.permission": "access",
+	  "command.permission.option.permission.description": "Feature for which you configure access",
+	  "command.permission.option.role": "role",
+	  "command.permission.option.role.description": "Role for which you configure access",
+	  "command.permission.option.value": "value",
+	  "command.permission.option.value.description": "Allow or deny access",
 
 	  "command.message.nicknames": "Nicknames",
 
@@ -79,8 +87,22 @@
 	  "message.player.kingdom_not_found": "Kingdom not found",
 	  "message.player.not_found": "Received player data not found",
 	  "message.player.name_or_user_required": "You should specify only player name or only his discord account",
+	  "message.permission.set.true": "Role {role} now has access to \"{permission}\"",
+	  "message.permission.set.false": "Role {role} no longer has access to \"{permission}\"",
+	  "message.permission.only_in_channel": "Access control available only on a server",
+	  "message.permission.admin_only": "Administrators only",
+	  "message.permission.role_not_found": "Can't find target role",
+	  "message.permission.all_arguments_required": "To manage an access you should provide all arguments",
 
-	  "message.command.error": "An error has occurred while executing the command"
+	  "message.command.error": "An error has occurred while executing the command",
+	  "message.command.no_permission": "You can't do this",
+	  "message.command.only_for_administrator": "Only administrator can do this",
+
+	  "permission.start_auction": "Start an auction",
+	  "permission.use_image_to_text": "Use image to text transformation features",
+	  "permission.manage_kingdom": "Manage kingdoms data",
+	  "permission.manage_kingdom_members": "Manage players data",
+	  "permission.show_kingdom_and_members_data": "Show kingdoms and players data"
 
 	}
 }
