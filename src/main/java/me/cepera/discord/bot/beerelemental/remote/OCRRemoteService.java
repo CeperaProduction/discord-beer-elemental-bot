@@ -1,6 +1,7 @@
 package me.cepera.discord.bot.beerelemental.remote;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -9,12 +10,20 @@ import javax.inject.Inject;
 
 import me.cepera.discord.bot.beerelemental.config.OCRConfig;
 import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClient;
 
 public class OCRRemoteService implements RemoteService {
 
     private final URI image2textURI = URI.create("https://api.ocr.space/parse/image");
 
     private final OCRConfig ocrConfig;
+
+    private HttpClient httpClient = HttpClient.create()
+            .responseTimeout(Duration.ofSeconds(90));
+
+    public HttpClient httpClient() {
+        return httpClient;
+    }
 
     @Inject
     public OCRRemoteService(OCRConfig ocrConfig) {

@@ -8,11 +8,13 @@ import javax.inject.Singleton;
 import dagger.Module;
 import dagger.Provides;
 import me.cepera.discord.bot.beerelemental.repository.ActiveAuctionRepository;
+import me.cepera.discord.bot.beerelemental.repository.FamArenaBattleRepository;
 import me.cepera.discord.bot.beerelemental.repository.GuildLocaleRepository;
 import me.cepera.discord.bot.beerelemental.repository.KingdomMemberRepository;
 import me.cepera.discord.bot.beerelemental.repository.KingdomRepository;
 import me.cepera.discord.bot.beerelemental.repository.RolePermissionRepository;
 import me.cepera.discord.bot.beerelemental.repository.sqlite.SQLiteActiveAuctionRepository;
+import me.cepera.discord.bot.beerelemental.repository.sqlite.SQLiteFamArenaRepository;
 import me.cepera.discord.bot.beerelemental.repository.sqlite.SQLiteGuildLocaleRepository;
 import me.cepera.discord.bot.beerelemental.repository.sqlite.SQLiteKingdomMemberRepository;
 import me.cepera.discord.bot.beerelemental.repository.sqlite.SQLiteKingdomRepository;
@@ -45,6 +47,13 @@ public class DataModule {
 
     @Provides
     @Singleton
+    @Named("famArenaDatabase")
+    SQLiteDatabase famArenaDatabase() {
+        return new SQLiteDatabase(Paths.get("data", "fam_arena.sqlite"));
+    }
+
+    @Provides
+    @Singleton
     ActiveAuctionRepository auctionRepository(@Named("auctionDatabase") SQLiteDatabase database) {
         return new SQLiteActiveAuctionRepository(database);
     }
@@ -71,6 +80,12 @@ public class DataModule {
     @Singleton
     RolePermissionRepository rolePermissionRepository(@Named("guildSettingsDatabase") SQLiteDatabase database) {
         return new SQLiteRolePermissionRepository(database);
+    }
+
+    @Provides
+    @Singleton
+    FamArenaBattleRepository famArenaBattleRepository(@Named("famArenaDatabase") SQLiteDatabase database) {
+        return new SQLiteFamArenaRepository(database);
     }
 
 }

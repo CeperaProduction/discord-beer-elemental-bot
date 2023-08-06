@@ -20,6 +20,9 @@ import io.netty.util.internal.ThrowableUtil;
 import me.cepera.discord.bot.beerelemental.config.OCRConfig;
 import me.cepera.discord.bot.beerelemental.converter.BodyConverter;
 import me.cepera.discord.bot.beerelemental.dto.ocr.OCRResponseDto;
+import me.cepera.discord.bot.beerelemental.dto.ocr.OCRResultDto;
+import me.cepera.discord.bot.beerelemental.dto.ocr.OCRTextLine;
+import me.cepera.discord.bot.beerelemental.dto.ocr.OCRTextOverlay;
 import me.cepera.discord.bot.beerelemental.remote.OCRRemoteService;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -62,30 +65,58 @@ public class OCRService implements ImageToTextService{
     }
 
     @Override
+    public Flux<WordPosition> findAllWordPositions(byte[] imageBytes) {
+        return image2textRequest("image.png", "image/png", imageBytes, params(true))
+                .flatMap(responseConverter::read)
+                .doOnNext(this::logResult)
+                .flatMapMany(this::getWordPositions);
+    }
+
+    @Override
+    public Flux<WordPosition> findAllWordPositions(String imageUrl) {
+        return image2textRequest(imageUrl, params(false))
+                .flatMap(responseConverter::read)
+                .doOnNext(this::logResult)
+                .flatMapMany(this::getWordPositions);
+    }
+
+    private Flux<WordPosition> getWordPositions(OCRResponseDto response){
+        return Flux.fromIterable(response.getParsedResults())
+                .filter(result->result.getTextOverlay() != null)
+                .map(OCRResultDto::getTextOverlay)
+                .flatMapIterable(OCRTextOverlay::getLines)
+                .flatMapIterable(OCRTextLine::getWords)
+                .map(ocrWord->new WordPosition(applyReplacements(ocrWord.getWordText()), ocrWord.getLeft(),
+                        ocrWord.getTop(), ocrWord.getWidth(), ocrWord.getHeight()));
+    }
+
+    @Override
     public Flux<String> findAllWords(byte[] imageBytes){
-        return image2textRequest("image.png", "image/png", imageBytes, params())
+        return image2textRequest("image.png", "image/png", imageBytes, params(false))
                 .flatMap(responseConverter::read)
                 .doOnNext(this::logResult)
                 .flatMapIterable(OCRResponseDto::getParsedResults)
-                .flatMapIterable(result->splitWords(result.getParsedText()));
+                .flatMapIterable(result->splitWords(result.getParsedText()))
+                .map(this::applyReplacements);
     }
 
     @Override
     public Flux<String> findAllWords(String imageUrl) {
-        return image2textRequest(imageUrl, params())
+        return image2textRequest(imageUrl, params(false))
                 .flatMap(responseConverter::read)
                 .doOnNext(this::logResult)
                 .flatMapIterable(OCRResponseDto::getParsedResults)
-                .flatMapIterable(result->splitWords(result.getParsedText()));
+                .flatMapIterable(result->splitWords(result.getParsedText()))
+                .map(this::applyReplacements);
     }
 
-    private Map<String, Object> params(){
+    private Map<String, Object> params(boolean overlayRequired){
         Map<String, Object> params = new HashMap<>();
 
         params.put("OCREngine", 2);
         params.put("isTable", true);
         params.put("scale", true);
-        params.put("isOverlayRequired", false);
+        params.put("isOverlayRequired", overlayRequired);
 
         return params;
     }
@@ -117,14 +148,12 @@ public class OCRService implements ImageToTextService{
     @Override
     public Flux<String> findNicknames(byte[] imageBytes){
         return findUniqueWords(imageBytes)
-                .map(this::applyReplacements)
                 .filter(this::filterNick);
     }
 
     @Override
     public Flux<String> findNicknames(String imageUrl) {
         return findUniqueWords(imageUrl)
-                .map(this::applyReplacements)
                 .filter(this::filterNick);
     }
 

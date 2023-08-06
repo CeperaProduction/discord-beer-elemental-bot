@@ -164,7 +164,7 @@ public class AuctionDiscordBotComponent implements DiscordBotComponent, DiscordT
     }
 
     @Override
-    public Mono<Void> handleChatInputInteractionEvent(ChatInputInteractionEvent event) {
+    public Mono<Void> handleChatInputInteractionEvent(ChatInputInteractionEvent event, DiscordBot bot) {
         if(!getCommandName(event).equals(COMMAND_AUCTION)) {
             return Mono.empty();
         }

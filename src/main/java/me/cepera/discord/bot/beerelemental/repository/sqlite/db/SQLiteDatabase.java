@@ -1,5 +1,7 @@
 package me.cepera.discord.bot.beerelemental.repository.sqlite.db;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -20,6 +22,12 @@ public class SQLiteDatabase {
     private final ReentrantLock lock = new ReentrantLock();
 
     public SQLiteDatabase(Path path) {
+        try {
+            Files.createDirectories(path.getParent());
+        } catch (IOException e) {
+            LOGGER.error("Can't create working directory.", e);
+            throw new RuntimeException(e);
+        }
         this.filePath = path.toAbsolutePath().toString();
     }
 

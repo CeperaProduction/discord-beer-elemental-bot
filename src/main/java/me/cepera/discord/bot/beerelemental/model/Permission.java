@@ -8,7 +8,9 @@ public enum Permission {
     USE_IMAGE_TO_TEXT,
     MANAGE_KINGDOM,
     MANAGE_KINGDOM_MEMBERS,
-    SHOW_KINGDOM_AND_MEMBERS_DATA;
+    SHOW_KINGDOM_AND_MEMBERS_DATA,
+    FAM_ARENA_LOOKUP,
+    FAM_ARENA_STORE;
 
     public String getValue() {
         return name().toLowerCase();

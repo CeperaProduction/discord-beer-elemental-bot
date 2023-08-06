@@ -52,6 +52,24 @@
 	  "command.permission.option.role.description": "Role for which you configure access",
 	  "command.permission.option.value": "value",
 	  "command.permission.option.value.description": "Allow or deny access",
+	  "command.fams": "fams",
+	  "command.fams.description": "Familiar arena",
+	  "command.fams.sub.show": "battles",
+	  "command.fams.sub.show.description": "Show stored familiar arena battles",
+	  "command.fams.sub.add": "store",
+	  "command.fams.sub.add.description": "Store familiar arena battle result",
+	  "command.fams.sub.list": "list",
+	  "command.fams.sub.list.description": "Show list of known targets in familiar arena",
+	  "command.fams.option.nickname": "nickname",
+	  "command.fams.option.nickname.description": "Target palyer's nickname",
+	  "command.fams.option.photo": "photo",
+	  "command.fams.option.photo.description": "Screenshot with target player's nickname",
+	  "command.fams.option.won": "wins",
+	  "command.fams.option.won.description": "Show only wins on only defeats",
+	  "command.fams.option.result": "result",
+	  "command.fams.option.result.description": "Screenshot with battle result stats",
+	  "command.fams.option.days": "day",
+	  "command.fams.option.days.description": "Start from specified day, relative to current",
 
 	  "command.message.nicknames": "Nicknames",
 
@@ -93,6 +111,21 @@
 	  "message.permission.admin_only": "Administrators only",
 	  "message.permission.role_not_found": "Can't find target role",
 	  "message.permission.all_arguments_required": "To manage an access you should provide all arguments",
+	  "message.fams.stored": "Result of battle with {opponent} saved ({result})",
+	  "message.fams.result.win": "Victory",
+	  "message.fams.result.lose": "Defeat",
+	  "message.fams.results": "Battles with {opponent}",
+	  "message.fams.results.wins_only": "Only victories",
+	  "message.fams.results.loses_only": "Only defeats",
+	  "message.fams.results.starting_from": "Starting from {timestamp}",
+	  "message.fams.targets": "Currently stored targets:\n{nicknames}",
+	  "message.fams.only_in_channel": "Familiar arena available only on server",
+	  "message.fams.wrong_attachment": "Attachment must be an image",
+	  "message.fams.cant_receive_any_image": "Can't receive attachment",
+	  "message.fams.cant_find_any_nickname": "Can't find target's nickname. Try to specify it by yourself.",
+	  "message.fams.cant_recognize_stats": "Can't recognize battle results. Try another screenshot.",
+	  "message.fams.no_battles_found": "> No battles found.",
+	  "message.fams.no_button_context": "This action is no longer available. Try to return to the beginning.",
 
 	  "message.command.error": "An error has occurred while executing the command",
 	  "message.command.no_permission": "You can't do this",
@@ -102,7 +135,10 @@
 	  "permission.use_image_to_text": "Use image to text transformation features",
 	  "permission.manage_kingdom": "Manage kingdoms data",
 	  "permission.manage_kingdom_members": "Manage players data",
-	  "permission.show_kingdom_and_members_data": "Show kingdoms and players data"
+	  "permission.show_kingdom_and_members_data": "Show kingdoms and players data",
+	  "permission.fam_arena_lookup": "See stored familiar arena battles",
+	  "permission.fam_arena_store": "Store familiar arena battles"
+
 
 	}
 }
