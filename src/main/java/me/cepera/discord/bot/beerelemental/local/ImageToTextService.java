@@ -16,4 +16,8 @@ public interface ImageToTextService {
 
     Flux<String> findNicknames(String imageUrl);
 
+    Flux<WordPosition> findAllWordPositions(byte[] imageBytes);
+
+    Flux<WordPosition> findAllWordPositions(String imageUrl);
+
 }

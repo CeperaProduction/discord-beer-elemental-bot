@@ -10,6 +10,7 @@ import dagger.multibindings.IntoSet;
 import me.cepera.discord.bot.beerelemental.discord.DiscordBot;
 import me.cepera.discord.bot.beerelemental.discord.DiscordBotComponent;
 import me.cepera.discord.bot.beerelemental.discord.components.AuctionDiscordBotComponent;
+import me.cepera.discord.bot.beerelemental.discord.components.FamArenaDiscordBotComponent;
 import me.cepera.discord.bot.beerelemental.discord.components.ImageToTextDiscordBotComponent;
 import me.cepera.discord.bot.beerelemental.discord.components.KingdomDataDiscordBotComponent;
 import me.cepera.discord.bot.beerelemental.discord.components.LocaleDiscordBotComponent;
@@ -49,6 +50,12 @@ public class DiscordModule {
     @Provides
     @IntoSet
     DiscordBotComponent kingdomDataDiscordBotComponent(KingdomDataDiscordBotComponent component) {
+        return component;
+    }
+
+    @Provides
+    @IntoSet
+    DiscordBotComponent famArenaDiscordBotComponent(FamArenaDiscordBotComponent component) {
         return component;
     }
 

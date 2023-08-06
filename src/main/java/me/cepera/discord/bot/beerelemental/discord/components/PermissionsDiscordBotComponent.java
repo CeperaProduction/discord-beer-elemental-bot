@@ -19,6 +19,7 @@ import discord4j.discordjson.json.ApplicationCommandOptionChoiceData;
 import discord4j.discordjson.json.ApplicationCommandOptionData;
 import discord4j.discordjson.json.ApplicationCommandRequest;
 import io.netty.util.internal.ThrowableUtil;
+import me.cepera.discord.bot.beerelemental.discord.DiscordBot;
 import me.cepera.discord.bot.beerelemental.discord.DiscordBotComponent;
 import me.cepera.discord.bot.beerelemental.discord.DiscordToolset;
 import me.cepera.discord.bot.beerelemental.local.PermissionService;
@@ -98,7 +99,7 @@ public class PermissionsDiscordBotComponent implements DiscordBotComponent, Disc
     }
 
     @Override
-    public Mono<Void> handleChatInputInteractionEvent(ChatInputInteractionEvent event) {
+    public Mono<Void> handleChatInputInteractionEvent(ChatInputInteractionEvent event, DiscordBot bot) {
         if(!getCommandName(event).equals(COMMAND_PERMISSION)) {
             return Mono.empty();
         }

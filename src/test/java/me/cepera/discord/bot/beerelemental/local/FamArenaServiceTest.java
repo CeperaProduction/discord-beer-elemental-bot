@@ -1,12 +1,12 @@
 package me.cepera.discord.bot.beerelemental.local;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.List;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
@@ -16,18 +16,24 @@ import me.cepera.discord.bot.beerelemental.config.OCRConfig;
 import me.cepera.discord.bot.beerelemental.config.OCRReplaceRule;
 import me.cepera.discord.bot.beerelemental.converter.GenericJsonBodyConverter;
 import me.cepera.discord.bot.beerelemental.dto.ocr.OCRResponseDto;
+import me.cepera.discord.bot.beerelemental.model.FamArenaBattle;
 import me.cepera.discord.bot.beerelemental.remote.OCRRemoteService;
+import me.cepera.discord.bot.beerelemental.repository.sqlite.SQLiteFamArenaRepository;
+import me.cepera.discord.bot.beerelemental.repository.sqlite.db.SQLiteDatabase;
 
 @Disabled
-public class OCRServiceTest {
+public class FamArenaServiceTest {
 
-    static OCRService service;
+    static OCRService ocrService;
+
+    static FamArenaService famArenaService;
 
     @BeforeAll
     static void prepare() {
         OCRConfig cfg = new OCRConfig();
 
-        cfg.setKey("<key>");
+        //cfg.setKey("<key>");
+        cfg.setKey("K81659552288957");
 
         cfg.getNickSettings().getIgnore().addAll(Arrays.asList(
 
@@ -48,39 +54,33 @@ public class OCRServiceTest {
 
                   ));
 
-        service = new OCRService(new OCRRemoteService(cfg),
+        ocrService = new OCRService(new OCRRemoteService(cfg),
                 new GenericJsonBodyConverter<>(OCRResponseDto.class),
                 cfg);
+
+        famArenaService = new FamArenaService(new SQLiteFamArenaRepository(
+                new SQLiteDatabase(Paths.get("target", "test", "data", "fam_arena_test.sqlite"))), ocrService);
+
+        famArenaService.battleResulsFolder = Paths.get("target", "test", "data", "fam_arena_results");
+
+        famArenaService.init();
     }
 
     @Test
-    void testFindNicknames() throws IOException {
+    void testResolveBattle() throws IOException {
 
-        byte[] imageBytes = loadImage("test_image.png");
+        byte[] imageBytes = loadImage("test_image4.png");
 
-        List<String> nicknames = service.findNicknames(imageBytes).collectList().block();
+        FamArenaBattle battle = famArenaService.storeBattleResult(1, imageBytes).block();
 
-        System.err.println("nicknames: "+nicknames);
+        System.err.println("battle: "+battle);
 
-        assertFalse(nicknames.isEmpty(), "No nicknames were received");
-
-    }
-
-    @Test
-    void testFindWordPositions() throws IOException {
-
-        byte[] imageBytes = loadImage("test_image2.png");
-
-        List<WordPosition> words = service.findAllWordPositions(imageBytes).collectList().block();
-
-        System.err.println("words: "+words);
-
-        assertFalse(words.isEmpty(), "No word positions were received");
+        assertNotNull(battle);
 
     }
 
     private byte[] loadImage(String name) throws IOException {
-        try(InputStream is = OCRServiceTest.class.getClassLoader().getResourceAsStream(name)){
+        try(InputStream is = FamArenaServiceTest.class.getClassLoader().getResourceAsStream(name)){
             byte[] buffer = new byte[4096];
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             int readen = 0;

@@ -87,22 +87,22 @@ public abstract class BasicDiscordBot implements DiscordBot{
             .subscribe();
 
         client.on(MessageInteractionEvent.class)
-        .publishOn(botActionsScheduler)
-        .flatMap(event->this.handleMessageInteractionEvent(event)
-                .onErrorResume(e->{
-                    LOGGER.error("Error on handling message interaction", e);
-                    return Mono.empty();
-                }))
-        .subscribe();
+            .publishOn(botActionsScheduler)
+            .flatMap(event->this.handleMessageInteractionEvent(event)
+                    .onErrorResume(e->{
+                        LOGGER.error("Error on handling message interaction", e);
+                        return Mono.empty();
+                    }))
+            .subscribe();
 
         client.on(ChatInputAutoCompleteEvent.class)
-        .publishOn(botActionsScheduler)
-        .flatMap(event->this.handleChatInputAutocompleteEvent(event)
-                .onErrorResume(e->{
-                    LOGGER.error("Error on handling autocompletion", e);
-                    return Mono.empty();
-                }))
-        .subscribe();
+            .publishOn(botActionsScheduler)
+            .flatMap(event->this.handleChatInputAutocompleteEvent(event)
+                    .onErrorResume(e->{
+                        LOGGER.error("Error on handling autocompletion", e);
+                        return Mono.empty();
+                    }))
+            .subscribe();
 
     }
 

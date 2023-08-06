@@ -8,11 +8,17 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 @JsonNaming(PropertyNamingStrategies.UpperCamelCaseStrategy.class)
 public class OCRResultDto {
 
+    private OCRTextOverlay textOverlay;
+
     private String parsedText;
 
-    private String errorMessage;
+    public OCRTextOverlay getTextOverlay() {
+        return textOverlay;
+    }
 
-    private String errorDetails;
+    public void setTextOverlay(OCRTextOverlay textOverlay) {
+        this.textOverlay = textOverlay;
+    }
 
     public String getParsedText() {
         return parsedText;
@@ -22,31 +28,9 @@ public class OCRResultDto {
         this.parsedText = parsedText;
     }
 
-    public String getErrorMessage() {
-        return errorMessage;
-    }
-
-    public void setErrorMessage(String errorMessage) {
-        this.errorMessage = errorMessage;
-    }
-
-    public String getErrorDetails() {
-        return errorDetails;
-    }
-
-    public void setErrorDetails(String errorDetails) {
-        this.errorDetails = errorDetails;
-    }
-
-    @Override
-    public String toString() {
-        return "OCRResultDto [parsedText=" + parsedText + ", errorMessage=" + errorMessage + ", errorDetails="
-                + errorDetails + "]";
-    }
-
     @Override
     public int hashCode() {
-        return Objects.hash(errorDetails, errorMessage, parsedText);
+        return Objects.hash(parsedText, textOverlay);
     }
 
     @Override
@@ -58,8 +42,12 @@ public class OCRResultDto {
         if (getClass() != obj.getClass())
             return false;
         OCRResultDto other = (OCRResultDto) obj;
-        return Objects.equals(errorDetails, other.errorDetails) && Objects.equals(errorMessage, other.errorMessage)
-                && Objects.equals(parsedText, other.parsedText);
+        return Objects.equals(parsedText, other.parsedText) && Objects.equals(textOverlay, other.textOverlay);
+    }
+
+    @Override
+    public String toString() {
+        return "OCRResultDto [textOverlay=" + textOverlay + ", parsedText=" + parsedText + "]";
     }
 
 }

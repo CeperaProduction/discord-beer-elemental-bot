@@ -1,6 +1,7 @@
 package me.cepera.discord.bot.beerelemental.discord;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -10,6 +11,9 @@ import javax.annotation.Nullable;
 
 import discord4j.core.event.domain.interaction.ApplicationCommandInteractionEvent;
 import discord4j.core.event.domain.interaction.ChatInputAutoCompleteEvent;
+import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
+import discord4j.core.object.command.ApplicationCommandInteractionOption;
+import discord4j.core.object.command.ApplicationCommandOption.Type;
 import discord4j.core.object.command.Interaction;
 import discord4j.core.object.entity.Attachment;
 import discord4j.core.object.entity.Guild;
@@ -50,6 +54,14 @@ public interface DiscordToolset {
             command = command.substring(1);
         }
         return command.toLowerCase();
+    }
+
+    default Optional<ApplicationCommandInteractionOption> getSubCommand(ChatInputInteractionEvent event){
+        return getSubCommand(event.getOptions());
+    }
+
+    default Optional<ApplicationCommandInteractionOption> getSubCommand(List<ApplicationCommandInteractionOption> options) {
+        return options.stream().filter(opt->opt.getType() == Type.SUB_COMMAND).findAny();
     }
 
     @Nullable

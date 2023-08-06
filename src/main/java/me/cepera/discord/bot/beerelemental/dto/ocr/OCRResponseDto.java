@@ -18,6 +18,10 @@ public class OCRResponseDto {
 
     private Integer OCRExitCode;
 
+    private List<String> errorMessage;
+
+    private String errorDetails;
+
     public List<OCRResultDto> getParsedResults() {
         return parsedResults;
     }
@@ -50,9 +54,26 @@ public class OCRResponseDto {
         OCRExitCode = oCRExitCode;
     }
 
+    public List<String> getErrorMessage() {
+        return errorMessage;
+    }
+
+    public void setErrorMessage(List<String> errorMessage) {
+        this.errorMessage = errorMessage;
+    }
+
+    public String getErrorDetails() {
+        return errorDetails;
+    }
+
+    public void setErrorDetails(String errorDetails) {
+        this.errorDetails = errorDetails;
+    }
+
     @Override
     public int hashCode() {
-        return Objects.hash(OCRExitCode, isErroredOnProcessing, parsedResults, processingTimeInMilliseconds);
+        return Objects.hash(OCRExitCode, errorDetails, errorMessage, isErroredOnProcessing, parsedResults,
+                processingTimeInMilliseconds);
     }
 
     @Override
@@ -64,7 +85,8 @@ public class OCRResponseDto {
         if (getClass() != obj.getClass())
             return false;
         OCRResponseDto other = (OCRResponseDto) obj;
-        return Objects.equals(OCRExitCode, other.OCRExitCode)
+        return Objects.equals(OCRExitCode, other.OCRExitCode) && Objects.equals(errorDetails, other.errorDetails)
+                && Objects.equals(errorMessage, other.errorMessage)
                 && Objects.equals(isErroredOnProcessing, other.isErroredOnProcessing)
                 && Objects.equals(parsedResults, other.parsedResults)
                 && Objects.equals(processingTimeInMilliseconds, other.processingTimeInMilliseconds);
@@ -74,7 +96,7 @@ public class OCRResponseDto {
     public String toString() {
         return "OCRResponseDto [parsedResults=" + parsedResults + ", processingTimeInMilliseconds="
                 + processingTimeInMilliseconds + ", isErroredOnProcessing=" + isErroredOnProcessing + ", OCRExitCode="
-                + OCRExitCode + "]";
+                + OCRExitCode + ", errorMessage=" + errorMessage + ", errorDetails=" + errorDetails + "]";
     }
 
 }

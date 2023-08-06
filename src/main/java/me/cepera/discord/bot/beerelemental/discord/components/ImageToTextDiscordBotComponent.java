@@ -25,6 +25,7 @@ import discord4j.core.spec.MessageCreateFields;
 import discord4j.discordjson.json.ApplicationCommandOptionData;
 import discord4j.discordjson.json.ApplicationCommandRequest;
 import io.netty.util.internal.ThrowableUtil;
+import me.cepera.discord.bot.beerelemental.discord.DiscordBot;
 import me.cepera.discord.bot.beerelemental.discord.DiscordBotComponent;
 import me.cepera.discord.bot.beerelemental.discord.DiscordToolset;
 import me.cepera.discord.bot.beerelemental.local.ImageToTextService;
@@ -119,7 +120,7 @@ public class ImageToTextDiscordBotComponent implements DiscordBotComponent, Disc
     }
 
     @Override
-    public Mono<Void> handleChatInputInteractionEvent(ChatInputInteractionEvent event) {
+    public Mono<Void> handleChatInputInteractionEvent(ChatInputInteractionEvent event, DiscordBot bot) {
         if(!getCommandName(event).equals(COMMAND_NICKNAMES)) {
             return Mono.empty();
         }
@@ -141,7 +142,7 @@ public class ImageToTextDiscordBotComponent implements DiscordBotComponent, Disc
     }
 
     @Override
-    public Mono<Void> handleMessageInteractionEvent(MessageInteractionEvent event) {
+    public Mono<Void> handleMessageInteractionEvent(MessageInteractionEvent event, DiscordBot bot) {
         if(!getCommandName(event).equals(MESSAGE_COMMAND_NICKNAMES)) {
             return Mono.empty();
         }

@@ -4,13 +4,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.function.BiFunction;
 
 import javax.inject.Inject;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import discord4j.core.GatewayDiscordClient;
 import discord4j.core.event.domain.interaction.ChatInputAutoCompleteEvent;
 import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
 import discord4j.core.event.domain.interaction.MessageInteractionEvent;
@@ -33,6 +33,12 @@ public class ComplexDiscordBot extends BasicDiscordBot{
     }
 
     @Override
+    protected void configureGatewayClient(GatewayDiscordClient client) {
+        super.configureGatewayClient(client);
+        components.forEach(component->component.configureGatewayClient(client));
+    }
+
+    @Override
     protected Flux<ApplicationCommandRequest> commandsToRegister() {
        return Flux.fromIterable(components).flatMap(DiscordBotComponent::commandsToRegister);
     }
@@ -52,14 +58,20 @@ public class ComplexDiscordBot extends BasicDiscordBot{
         return handeForEachComponent(event, DiscordBotComponent::handleChatInputAutocompleteEvent);
     }
 
-    private <T> Mono<Void> handeForEachComponent(T event, BiFunction<DiscordBotComponent, T, Mono<Void>> componentHandler){
+    private <T> Mono<Void> handeForEachComponent(T event, DiscordBotComponentFunction<T> componentHandler){
         return Flux.fromIterable(components)
-                .flatMap(component->componentHandler.apply(component, event).onErrorResume(e->{
+                .flatMap(component->componentHandler.apply(component, event, this).onErrorResume(e->{
                     LOGGER.error("Unhandled exception in component {}: {}",
                             component.getClass().getName(), ThrowableUtil.stackTraceToString(e));
                     return Mono.empty();
                 }))
                 .then();
+    }
+
+    private static interface DiscordBotComponentFunction<E>{
+
+        Mono<Void> apply(DiscordBotComponent component, E event, DiscordBot bot);
+
     }
 
 }
