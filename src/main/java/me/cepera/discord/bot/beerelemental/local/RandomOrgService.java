@@ -1,5 +1,6 @@
 package me.cepera.discord.bot.beerelemental.local;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -47,6 +48,9 @@ public class RandomOrgService implements RandomService{
         int realCount = Math.max(Math.min(max-min, maxCount), 0);
         if(realCount == 0) {
             return Mono.fromSupplier(Collections::emptyList);
+        }
+        if(max-min == 1) {
+            return Mono.fromSupplier(()->Arrays.asList(min));
         }
         if(config.isRemote()) {
             return generateRandomIntegersRemote(min, max, realCount, unique)

@@ -23,7 +23,7 @@ public class AuctionDiscordBotComponentScheduler implements DiscordBotScheduler{
     @Override
     public void start(DiscordBot bot) {
         executor.scheduleAtFixedRate(()->auctionComponent.completeEndedAuctions(bot).subscribe(),
-                1, 5, TimeUnit.SECONDS);
+                5, 5, TimeUnit.SECONDS);
     }
 
 }

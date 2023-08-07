@@ -5,10 +5,12 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -336,9 +338,11 @@ public class AuctionDiscordBotComponent implements DiscordBotComponent, DiscordT
             .flatMap(messageData->Mono.justOrEmpty(messageData.reactions().toOptional()))
             .flatMapIterable(list->list)
             .flatMap(reaction->Mono.justOrEmpty(reaction.emoji().name().map(name->reaction.emoji().id()
-                    .map(id->name+":"+id).orElse(name))))
-            .flatMap(reaction->bot.getDiscordClient().getChannelService()
-                    .getReactions(auction.getChannelId(), auction.getMessageId(), reaction, Collections.emptyMap()))
+                    .map(id->name+":"+id).orElse(name)))
+                    .flatMapMany(reactionId->bot.getDiscordClient().getChannelService()
+                            .getReactions(auction.getChannelId(), auction.getMessageId(), reactionId, reactionsQueryParams(false))
+                            .mergeWith(bot.getDiscordClient().getChannelService()
+                            .getReactions(auction.getChannelId(), auction.getMessageId(), reactionId, reactionsQueryParams(true)))))
             .map(userData->userData.id().asLong())
             .collect(Collectors.toSet())
             .zipWith(kingdomRepository.getKingdomByRole(guild.getId().asLong(), auction.getRoleId())
@@ -400,6 +404,15 @@ public class AuctionDiscordBotComponent implements DiscordBotComponent, DiscordT
             .onErrorResume(e->Mono.fromRunnable(()->
                 LOGGER.error("Error while auction completing auction {} Error {}", auction, ThrowableUtil.stackTraceToString(e))))
             .then(Mono.empty());
+    }
+
+    private Map<String, Object> reactionsQueryParams(boolean isSuper){
+        Map<String, Object> params = new HashMap<>();
+        params.put("limit", 100);
+        if(isSuper) {
+            params.put("type", 1);
+        }
+        return params;
     }
 
     private Mono<Tuple2<List<String>, List<String>>> getParticipantsAndWinnersDisplays(List<AuctionParticipant> participants, int lotsCount){
