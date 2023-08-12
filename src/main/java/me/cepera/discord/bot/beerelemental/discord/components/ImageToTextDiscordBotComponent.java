@@ -193,14 +193,12 @@ public class ImageToTextDiscordBotComponent implements DiscordBotComponent, Disc
 
     private Mono<Void> sendFoundNicknames(ApplicationCommandInteractionEvent event, List<String> nicknames, boolean expanded,
             List<Attachment> attachments, Optional<String> messageUrl){
-        if(nicknames.isEmpty()) {
-            return event.editReply()
-                    .withContentOrNull(nothingWasFoundResponseText(event))
-                    .then();
-        }
+
 
         String content;
-        if(expanded) {
+        if(nicknames.isEmpty()) {
+            content = nothingWasFoundResponseText(event);
+        }else if(expanded) {
             content = ">>> "+String.join("\n", IntStream.range(0, nicknames.size())
                     .mapToObj(i->(i+1)+". "+nicknames.get(i))
                     .collect(Collectors.toList()));

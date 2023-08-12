@@ -12,16 +12,22 @@ public class ImageUtils {
 
     public static BufferedImage readImage(byte[] imageContent) {
         try {
-            return ImageIO.read(new ByteArrayInputStream(imageContent));
+            BufferedImage image = ImageIO.read(new ByteArrayInputStream(imageContent));
+            if(image.getType() != BufferedImage.TYPE_INT_RGB) {
+                BufferedImage fixedImage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
+                fixedImage.getGraphics().drawImage(image, 0, 0, null);
+                image = fixedImage;
+            }
+            return image;
         }catch (IOException e) {
             throw new RuntimeException();
         }
     }
 
-    public static byte[] writeImagePng(BufferedImage image) {
+    public static byte[] writeImage(BufferedImage image, ImageFormat format) {
         try {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            ImageIO.write(image, "png", bos);
+            ImageIO.write(image, format.name().toLowerCase(), bos);
             return bos.toByteArray();
         }catch (IOException e) {
             throw new RuntimeException(e);
@@ -50,9 +56,9 @@ public class ImageUtils {
             targetHeight = (int) (1.0D * image.getHeight() * targetWidth / image.getWidth());
         }
 
-        Image scaledImage = image.getScaledInstance(targetWidth, targetHeight, Image.SCALE_DEFAULT);
+        Image scaledImage = image.getScaledInstance(targetWidth, targetHeight, Image.SCALE_SMOOTH);
 
-        BufferedImage resizedImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_ARGB);
+        BufferedImage resizedImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
         resizedImage.getGraphics().drawImage(scaledImage, 0, 0, null);
 
         return resizedImage;
@@ -61,7 +67,7 @@ public class ImageUtils {
     public static BufferedImage getSubImage(BufferedImage image, int x, int y, int width, int height) {
         Image imagePart = image.getSubimage(x, y, width, height);
 
-        BufferedImage subImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        BufferedImage subImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         subImage.getGraphics().drawImage(imagePart, 0, 0, null);
 
         return subImage;

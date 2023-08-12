@@ -21,6 +21,7 @@ import org.apache.logging.log4j.Logger;
 
 import me.cepera.discord.bot.beerelemental.model.FamArenaBattle;
 import me.cepera.discord.bot.beerelemental.repository.FamArenaBattleRepository;
+import me.cepera.discord.bot.beerelemental.utils.ImageFormat;
 import me.cepera.discord.bot.beerelemental.utils.ImageUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -117,7 +118,7 @@ public class FamArenaService {
 
     public Mono<FamArenaBattle> storeBattleResult(long guildId, byte[] imageBytes){
         byte[] preparedImageBytes = compressImageTo1M(imageBytes);
-        return imageToTextService.findAllWordPositions(preparedImageBytes)
+        return imageToTextService.findAllWordPositions(preparedImageBytes, ImageFormat.JPEG)
                 .filter(word->simpleWordPattern.matcher(word.getWord()).matches())
                 .collectList()
                 .flatMap(this::getBattlersAndResult)
@@ -134,33 +135,54 @@ public class FamArenaService {
         battle.setAsiat(nonDefaultLetterContainsPattern.matcher(battle.getOpponent()).matches());
 
         BufferedImage image = ImageUtils.readImage(imageBytes);
-        battle.setImage(generateImageName(battle));
 
-        Tuple4<Integer, Integer, Integer, Integer> rect = calculateCutRectagle(image.getWidth(), image.getHeight(),
+        int originalWidth = image.getWidth();
+        int originalHeight = image.getHeight();
+
+        Tuple4<Integer, Integer, Integer, Integer> rect = calculateCutRectagle(originalWidth, originalHeight,
                 rawResult.getT1(), rawResult.getT2());
 
-        LOGGER.info("Calculated size for image {}: {}. Original size: {}x{}", battle.getImage(), rect, image.getWidth(), image.getHeight());
+        image = ImageUtils.setMaxDimension(ImageUtils.getSubImage(image, rect.getT1(), rect.getT2(), rect.getT3(), rect.getT4()), 850);
 
-        return saveImage(battle.getImage(), ImageUtils.writeImagePng(
-                ImageUtils.setMaxDimension(ImageUtils.getSubImage(image,
-                        rect.getT1(), rect.getT2(), rect.getT3(), rect.getT4()), 850)))
+        battle.setImage(generateImageName(battle));
+
+        LOGGER.info("Calculated stats area of image {}: {}. Original size: {}x{} Storing size: {}x{}",
+                battle.getImage(), rect, originalWidth, originalHeight, image.getWidth(), image.getHeight());
+
+        return saveImage(battle.getImage(), ImageUtils.writeImage(image, ImageFormat.PNG))
                 .then(battleRepository.addBattle(battle));
     }
 
     private byte[] compressImageTo1M(byte[] bytes) {
         int cap = 1024000;
+        BufferedImage image = ImageUtils.readImage(bytes);
+        bytes = ImageUtils.writeImage(image, ImageFormat.JPEG);
         if(bytes.length > cap) {
-            BufferedImage image = ImageUtils.readImage(bytes);
             if(1.0 * image.getWidth() / image.getHeight() > 1.65) {
                 int x0 = (int) (image.getWidth() * 0.3);
                 int width0 = image.getWidth() - x0 * 2;
+                LOGGER.info("Image size is {} bytes that is greater than {} bytes cap. "
+                        + "Original image size is {}x{}. Cutting X -> [{}, {}]",
+                        bytes.length, cap, image.getWidth(), image.getHeight(), x0, width0);
                 image = ImageUtils.getSubImage(image, x0, 0, width0, image.getHeight());
+                bytes = ImageUtils.writeImage(image, ImageFormat.JPEG);
             }
-            bytes = ImageUtils.writeImagePng(image);
             if(bytes.length > cap) {
-                if(ImageUtils.getMaxDimension(image) > 1200) {
-                    image = ImageUtils.setMaxDimension(image, 1200);
-                    bytes = ImageUtils.writeImagePng(image);
+                if(ImageUtils.getMaxDimension(image) > 1600) {
+                    image = ImageUtils.setMaxDimension(image, 1600);
+                    LOGGER.info("Image size is {} bytes that is greater than {} bytes cap. "
+                            + "Compressing to new image size {}x{}.",
+                            bytes.length, cap, image.getWidth(), image.getHeight());
+                    bytes = ImageUtils.writeImage(image, ImageFormat.JPEG);
+                }
+            }
+            if(bytes.length > cap) {
+                if(ImageUtils.getMaxDimension(image) > 980) {
+                    image = ImageUtils.setMaxDimension(image, 980);
+                    LOGGER.info("Image size is {} bytes that is greater than {} bytes cap. "
+                            + "Compressing to new image size {}x{}.",
+                            bytes.length, cap, image.getWidth(), image.getHeight());
+                    bytes = ImageUtils.writeImage(image, ImageFormat.JPEG);
                 }
             }
         }
@@ -184,6 +206,16 @@ public class FamArenaService {
         }
         WordPosition battler = words.get(vsIndex-1);
         WordPosition opponent = words.get(vsIndex+1);
+
+        if(Math.abs(battler.getY() - vs.getY()) > vs.getHeight()) {
+            LOGGER.warn("Can't find battler");
+            return Mono.empty();
+        }
+
+        if(Math.abs(opponent.getY() - vs.getY()) > vs.getHeight()) {
+            LOGGER.warn("Can't find opponent");
+            return Mono.empty();
+        }
 
         WordPosition realOpponent = opponent;
         for(int i = vsIndex + 2; i < words.size(); ++i) {
@@ -244,8 +276,8 @@ public class FamArenaService {
         return battleResulsFolder.resolve(imageName+".png");
     }
 
-    private Mono<Void> saveImage(String name, byte[] imageBytes) {
-        return Mono.fromCallable(()->Files.write(battleResultsImagePath(name), imageBytes)).then();
+    private Mono<Void> saveImage(String name, byte[] imagePngBytes) {
+        return Mono.fromCallable(()->Files.write(battleResultsImagePath(name), imagePngBytes)).then();
     }
 
     private Mono<byte[]> readImage(String name){

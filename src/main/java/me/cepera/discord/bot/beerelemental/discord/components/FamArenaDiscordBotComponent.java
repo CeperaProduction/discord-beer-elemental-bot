@@ -41,6 +41,7 @@ import me.cepera.discord.bot.beerelemental.local.PermissionService;
 import me.cepera.discord.bot.beerelemental.local.lang.LanguageService;
 import me.cepera.discord.bot.beerelemental.model.FamArenaBattle;
 import me.cepera.discord.bot.beerelemental.model.Permission;
+import me.cepera.discord.bot.beerelemental.utils.ImageFormat;
 import me.cepera.discord.bot.beerelemental.utils.ImageUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -392,7 +393,7 @@ public class FamArenaDiscordBotComponent implements DiscordBotComponent, Discord
     private Mono<Void> sendAddBattleResult(ApplicationCommandInteractionEvent event, FamArenaBattle battle, byte[] image){
 
         MessageCreateFields.File file = MessageCreateFields.File.of("stats.png",
-                new ByteArrayInputStream(ImageUtils.writeImagePng(ImageUtils.readImage(image))));
+                new ByteArrayInputStream(ImageUtils.writeImage(ImageUtils.readImage(image), ImageFormat.PNG)));
 
         return event.editReply()
                 .withContentOrNull(battleResultStored(event, battle))
@@ -423,22 +424,6 @@ public class FamArenaDiscordBotComponent implements DiscordBotComponent, Discord
                 .then();
     }
 
-    /*
-    private Mono<Void> sendBattleResults(String locale, Message message, Guild guild, String opponent,
-            long timestamp, Optional<Boolean> winFilter, List<byte[]> resultImages, int offset, boolean hasPrevious, boolean hasNext){
-
-        Tuple3<String, List<MessageCreateFields.File>, List<LayoutComponent>> preparedResults = prepareBattleResults(
-                locale, guild, opponent, timestamp, winFilter, resultImages, offset, hasPrevious, hasNext);
-
-        System.out.println("from message");
-
-        return message.edit()
-                .withContentOrNull(preparedResults.getT1())
-                .withFiles(preparedResults.getT2())
-                .withComponentsOrNull(preparedResults.getT3())
-                .then();
-    }*/
-
     private Tuple3<String, List<MessageCreateFields.File>, List<LayoutComponent>> prepareBattleResults(String locale, Guild guild, String opponent,
             long timestamp, Optional<Boolean> winFilter, List<byte[]> resultImages, int offset, boolean hasPrevious, boolean hasNext){
 
@@ -446,7 +431,7 @@ public class FamArenaDiscordBotComponent implements DiscordBotComponent, Discord
 
         for(int i = 0; i < resultImages.size(); ++i) {
             MessageCreateFields.File file = MessageCreateFields.File.of(opponent+"_"+(i+1)+".png",
-                    new ByteArrayInputStream(ImageUtils.writeImagePng(ImageUtils.readImage(resultImages.get(i)))));
+                    new ByteArrayInputStream(ImageUtils.writeImage(ImageUtils.readImage(resultImages.get(i)), ImageFormat.PNG)));
             files.add(file);
         }
 

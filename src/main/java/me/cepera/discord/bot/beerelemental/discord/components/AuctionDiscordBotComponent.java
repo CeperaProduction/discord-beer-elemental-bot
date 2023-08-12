@@ -55,6 +55,7 @@ import me.cepera.discord.bot.beerelemental.repository.ActiveAuctionRepository;
 import me.cepera.discord.bot.beerelemental.repository.GuildLocaleRepository;
 import me.cepera.discord.bot.beerelemental.repository.KingdomMemberRepository;
 import me.cepera.discord.bot.beerelemental.repository.KingdomRepository;
+import me.cepera.discord.bot.beerelemental.utils.ImageFormat;
 import me.cepera.discord.bot.beerelemental.utils.ImageUtils;
 import me.cepera.discord.bot.beerelemental.utils.TimeUtils;
 import reactor.core.publisher.Flux;
@@ -282,7 +283,7 @@ public class AuctionDiscordBotComponent implements DiscordBotComponent, DiscordT
                                             +auctionParticipantsText(langTag, tuple.getT1()))
                                         .withAllowedMentions(AllowedMentions.suppressAll())
                                         .withFiles(MessageCreateFields.File.of("item.png",
-                                                new ByteArrayInputStream(ImageUtils.writeImagePng(ImageUtils.readImage(itemBytes)))))
+                                                new ByteArrayInputStream(ImageUtils.writeImage(ImageUtils.readImage(itemBytes), ImageFormat.JPEG))))
                                         .flatMap(message->channel.createMessage()
                                                 .withMessageReference(message.getId())
                                                 .withContent(auctionResultText(langTag, tuple.getT2()))))
@@ -305,7 +306,7 @@ public class AuctionDiscordBotComponent implements DiscordBotComponent, DiscordT
 
     private Mono<Message> sendAuctionStartMessage(ChatInputInteractionEvent event, Guild guild, byte[] itemBytes, int count, Role role, Instant rollTime) {
         MessageCreateFields.File file = MessageCreateFields.File.of("item.png",
-                new ByteArrayInputStream(ImageUtils.writeImagePng(ImageUtils.readImage(itemBytes))));
+                new ByteArrayInputStream(ImageUtils.writeImage(ImageUtils.readImage(itemBytes), ImageFormat.JPEG)));
         return guildLocaleRepository.getGuildLocale(guild.getId().asLong())
                 .flatMap(guildLocale->event.editReply()
                         .withContentOrNull(auctionPrepareText(guildLocale.getLanguageTag()))

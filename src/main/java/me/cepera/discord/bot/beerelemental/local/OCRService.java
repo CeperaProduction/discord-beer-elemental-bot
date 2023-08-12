@@ -24,6 +24,7 @@ import me.cepera.discord.bot.beerelemental.dto.ocr.OCRResultDto;
 import me.cepera.discord.bot.beerelemental.dto.ocr.OCRTextLine;
 import me.cepera.discord.bot.beerelemental.dto.ocr.OCRTextOverlay;
 import me.cepera.discord.bot.beerelemental.remote.OCRRemoteService;
+import me.cepera.discord.bot.beerelemental.utils.ImageFormat;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
@@ -65,8 +66,8 @@ public class OCRService implements ImageToTextService{
     }
 
     @Override
-    public Flux<WordPosition> findAllWordPositions(byte[] imageBytes) {
-        return image2textRequest("image.png", "image/png", imageBytes, params(true))
+    public Flux<WordPosition> findAllWordPositions(byte[] imageBytes, ImageFormat format) {
+        return image2textRequest("image.png", format.getMimeType(), imageBytes, params(true, 2))
                 .flatMap(responseConverter::read)
                 .doOnNext(this::logResult)
                 .flatMapMany(this::getWordPositions);
@@ -74,7 +75,7 @@ public class OCRService implements ImageToTextService{
 
     @Override
     public Flux<WordPosition> findAllWordPositions(String imageUrl) {
-        return image2textRequest(imageUrl, params(false))
+        return image2textRequest(imageUrl, params(true, 2))
                 .flatMap(responseConverter::read)
                 .doOnNext(this::logResult)
                 .flatMapMany(this::getWordPositions);
@@ -91,8 +92,8 @@ public class OCRService implements ImageToTextService{
     }
 
     @Override
-    public Flux<String> findAllWords(byte[] imageBytes){
-        return image2textRequest("image.png", "image/png", imageBytes, params(false))
+    public Flux<String> findAllWords(byte[] imageBytes, ImageFormat format){
+        return image2textRequest("image.png", format.getMimeType(), imageBytes, params())
                 .flatMap(responseConverter::read)
                 .doOnNext(this::logResult)
                 .flatMapIterable(OCRResponseDto::getParsedResults)
@@ -102,7 +103,7 @@ public class OCRService implements ImageToTextService{
 
     @Override
     public Flux<String> findAllWords(String imageUrl) {
-        return image2textRequest(imageUrl, params(false))
+        return image2textRequest(imageUrl, params())
                 .flatMap(responseConverter::read)
                 .doOnNext(this::logResult)
                 .flatMapIterable(OCRResponseDto::getParsedResults)
@@ -110,10 +111,14 @@ public class OCRService implements ImageToTextService{
                 .map(this::applyReplacements);
     }
 
-    private Map<String, Object> params(boolean overlayRequired){
+    private Map<String, Object> params(){
+        return params(false, 2);
+    }
+
+    private Map<String, Object> params(boolean overlayRequired, int engine){
         Map<String, Object> params = new HashMap<>();
 
-        params.put("OCREngine", 2);
+        params.put("OCREngine", engine);
         params.put("isTable", true);
         params.put("scale", true);
         params.put("isOverlayRequired", overlayRequired);
@@ -129,11 +134,12 @@ public class OCRService implements ImageToTextService{
         if(response.getIsErroredOnProcessing() != null && response.getIsErroredOnProcessing()) {
             LOGGER.error("Errors were detected during OCR processing. OCR response object: {}", response);
         }
+        LOGGER.debug(()->"OCR service parsed response: "+response.toString());
     }
 
     @Override
-    public Flux<String> findUniqueWords(byte[] imageBytes){
-        return findAllWords(imageBytes)
+    public Flux<String> findUniqueWords(byte[] imageBytes, ImageFormat format){
+        return findAllWords(imageBytes, format)
                 .collectList()
                 .flatMapIterable(list->new LinkedHashSet<>(list));
     }
@@ -146,8 +152,8 @@ public class OCRService implements ImageToTextService{
     }
 
     @Override
-    public Flux<String> findNicknames(byte[] imageBytes){
-        return findUniqueWords(imageBytes)
+    public Flux<String> findNicknames(byte[] imageBytes, ImageFormat format){
+        return findUniqueWords(imageBytes, format)
                 .filter(this::filterNick);
     }
 

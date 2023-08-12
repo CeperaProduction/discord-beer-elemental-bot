@@ -4,12 +4,17 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 import me.cepera.discord.bot.beerelemental.model.FamArenaBattle;
 import me.cepera.discord.bot.beerelemental.repository.FamArenaBattleRepository;
 import me.cepera.discord.bot.beerelemental.repository.sqlite.db.SQLiteDatabase;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
 
 public class SQLiteFamArenaRepository extends SQLiteRepository implements FamArenaBattleRepository{
 
@@ -44,18 +49,18 @@ public class SQLiteFamArenaRepository extends SQLiteRepository implements FamAre
     public Flux<String> findOpponentNicknames(long guildId) {
         return Flux.defer(()->Flux.fromIterable(connect(c->{
 
-            PreparedStatement stm = c.prepareStatement("SELECT DISTINCT opponent FROM fam_arena_battles WHERE guildId = ? ORDER BY opponent");
+            PreparedStatement stm = c.prepareStatement("SELECT DISTINCT opponent, opponentLower FROM fam_arena_battles WHERE guildId = ?");
             stm.setLong(1, guildId);
 
             ResultSet rs = stm.executeQuery();
 
-            List<String> opponents = new LinkedList<>();
+            Set<Tuple2<String, String>> opponents = new TreeSet<>((t1, t2)->t1.getT2().compareTo(t2.getT2()));
 
             while(rs.next()) {
-                opponents.add(rs.getString(1));
+                opponents.add(Tuples.of(rs.getString(1), rs.getString(2)));
             }
 
-            return opponents;
+            return opponents.stream().map(Tuple2::getT1).collect(Collectors.toList());
 
         })));
     }
@@ -64,21 +69,20 @@ public class SQLiteFamArenaRepository extends SQLiteRepository implements FamAre
     public Flux<String> findOpponentNicknames(long guildId, String search) {
         return Flux.defer(()->Flux.fromIterable(connect(c->{
 
-            PreparedStatement stm = c.prepareStatement("SELECT DISTINCT opponent FROM fam_arena_battles WHERE guildId = ? "
-                    + "AND (opponent LIKE ? COLLATE NOCASE OR opponentLower LIKE ?) ORDER BY opponent");
+            PreparedStatement stm = c.prepareStatement("SELECT DISTINCT opponent, opponentLower FROM fam_arena_battles WHERE guildId = ? "
+                    + "AND opponentLower LIKE ?");
             stm.setLong(1, guildId);
-            stm.setString(2, prepareSearch(search));
-            stm.setString(3, prepareSearch(search).toLowerCase());
+            stm.setString(2, prepareSearch(search.toLowerCase()));
 
             ResultSet rs = stm.executeQuery();
 
-            List<String> opponents = new LinkedList<>();
+            Set<Tuple2<String, String>> opponents = new TreeSet<>((t1, t2)->t1.getT2().compareTo(t2.getT2()));
 
             while(rs.next()) {
-                opponents.add(rs.getString(1));
+                opponents.add(Tuples.of(rs.getString(1), rs.getString(2)));
             }
 
-            return opponents;
+            return opponents.stream().map(Tuple2::getT1).collect(Collectors.toList());
 
         })));
     }
@@ -90,13 +94,12 @@ public class SQLiteFamArenaRepository extends SQLiteRepository implements FamAre
 
             PreparedStatement stm = c.prepareStatement("SELECT id, battler, opponent, asiat, win, timestamp, image "
                     + "FROM fam_arena_battles WHERE guildId = ? AND timestamp >= ? "
-                    + "AND (opponent LIKE ? COLLATE NOCASE OR opponentLower LIKE ?) "
+                    + "AND opponentLower LIKE ? "
                     + (winOnly == null ? "" : winOnly.booleanValue() ? "AND win = 1 " : "AND win = 0 ")
                     + "LIMIT "+count+" OFFSET "+offset);
             stm.setLong(1, guildId);
             stm.setLong(2, minTimestamp);
-            stm.setString(3, prepareSearch(search));
-            stm.setString(4, prepareSearch(search).toLowerCase());
+            stm.setString(3, prepareSearch(search.toLowerCase()));
 
             ResultSet rs = stm.executeQuery();
 

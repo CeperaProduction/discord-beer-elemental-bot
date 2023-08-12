@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 
@@ -17,6 +19,8 @@ import me.cepera.discord.bot.beerelemental.config.OCRReplaceRule;
 import me.cepera.discord.bot.beerelemental.converter.GenericJsonBodyConverter;
 import me.cepera.discord.bot.beerelemental.dto.ocr.OCRResponseDto;
 import me.cepera.discord.bot.beerelemental.remote.OCRRemoteService;
+import me.cepera.discord.bot.beerelemental.utils.ImageFormat;
+import me.cepera.discord.bot.beerelemental.utils.ImageUtils;
 
 @Disabled
 public class OCRServiceTest {
@@ -58,7 +62,7 @@ public class OCRServiceTest {
 
         byte[] imageBytes = loadImage("test_image.png");
 
-        List<String> nicknames = service.findNicknames(imageBytes).collectList().block();
+        List<String> nicknames = service.findNicknames(imageBytes, ImageFormat.PNG).collectList().block();
 
         System.err.println("nicknames: "+nicknames);
 
@@ -71,7 +75,11 @@ public class OCRServiceTest {
 
         byte[] imageBytes = loadImage("test_image2.png");
 
-        List<WordPosition> words = service.findAllWordPositions(imageBytes).collectList().block();
+        byte[] imageBytes2 = ImageUtils.writeImage(ImageUtils.readImage(imageBytes), ImageFormat.JPEG);
+
+        writeImage("test_image2.jpeg", imageBytes2);
+
+        List<WordPosition> words = service.findAllWordPositions(imageBytes2, ImageFormat.JPEG).collectList().block();
 
         System.err.println("words: "+words);
 
@@ -89,6 +97,10 @@ public class OCRServiceTest {
             }
             return out.toByteArray();
         }
+    }
+
+    private void writeImage(String name, byte[] bytes) throws IOException{
+        Files.write(Paths.get("target", name), bytes);
     }
 
 }
