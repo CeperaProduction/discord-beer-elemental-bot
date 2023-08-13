@@ -392,8 +392,8 @@ public class FamArenaDiscordBotComponent implements DiscordBotComponent, Discord
 
     private Mono<Void> sendAddBattleResult(ApplicationCommandInteractionEvent event, FamArenaBattle battle, byte[] image){
 
-        MessageCreateFields.File file = MessageCreateFields.File.of("stats.png",
-                new ByteArrayInputStream(ImageUtils.writeImage(ImageUtils.readImage(image), ImageFormat.PNG)));
+        MessageCreateFields.File file = MessageCreateFields.File.of("stats.jpg",
+                new ByteArrayInputStream(ImageUtils.writeImage(ImageUtils.readImage(image), ImageFormat.JPEG)));
 
         return event.editReply()
                 .withContentOrNull(battleResultStored(event, battle))
@@ -430,8 +430,8 @@ public class FamArenaDiscordBotComponent implements DiscordBotComponent, Discord
         List<MessageCreateFields.File> files = new ArrayList<>();
 
         for(int i = 0; i < resultImages.size(); ++i) {
-            MessageCreateFields.File file = MessageCreateFields.File.of(opponent+"_"+(i+1)+".png",
-                    new ByteArrayInputStream(ImageUtils.writeImage(ImageUtils.readImage(resultImages.get(i)), ImageFormat.PNG)));
+            MessageCreateFields.File file = MessageCreateFields.File.of(opponent+"_"+(i+1)+".jpg",
+                    new ByteArrayInputStream(ImageUtils.writeImage(ImageUtils.readImage(resultImages.get(i)), ImageFormat.JPEG)));
             files.add(file);
         }
 

@@ -56,6 +56,10 @@ public class ImageUtils {
             targetHeight = (int) (1.0D * image.getHeight() * targetWidth / image.getWidth());
         }
 
+        if(targetWidth == image.getWidth() && targetHeight == image.getHeight()) {
+            return image;
+        }
+
         Image scaledImage = image.getScaledInstance(targetWidth, targetHeight, Image.SCALE_SMOOTH);
 
         BufferedImage resizedImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);

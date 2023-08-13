@@ -149,7 +149,7 @@ public class FamArenaService {
         LOGGER.info("Calculated stats area of image {}: {}. Original size: {}x{} Storing size: {}x{}",
                 battle.getImage(), rect, originalWidth, originalHeight, image.getWidth(), image.getHeight());
 
-        return saveImage(battle.getImage(), ImageUtils.writeImage(image, ImageFormat.PNG))
+        return saveImage(battle.getImage(), ImageUtils.writeImage(image, ImageFormat.JPEG))
                 .then(battleRepository.addBattle(battle));
     }
 
@@ -177,8 +177,8 @@ public class FamArenaService {
                 }
             }
             if(bytes.length > cap) {
-                if(ImageUtils.getMaxDimension(image) > 980) {
-                    image = ImageUtils.setMaxDimension(image, 980);
+                if(ImageUtils.getMaxDimension(image) > 1000) {
+                    image = ImageUtils.setMaxDimension(image, 1000);
                     LOGGER.info("Image size is {} bytes that is greater than {} bytes cap. "
                             + "Compressing to new image size {}x{}.",
                             bytes.length, cap, image.getWidth(), image.getHeight());
@@ -273,15 +273,32 @@ public class FamArenaService {
     }
 
     private Path battleResultsImagePath(String imageName) {
+        return battleResulsFolder.resolve(imageName+".jpg");
+    }
+
+    @Deprecated
+    private Path battleResultsImagePathPng(String imageName) {
         return battleResulsFolder.resolve(imageName+".png");
     }
 
-    private Mono<Void> saveImage(String name, byte[] imagePngBytes) {
-        return Mono.fromCallable(()->Files.write(battleResultsImagePath(name), imagePngBytes)).then();
+    private Mono<Void> saveImage(String name, byte[] imageJpegBytes) {
+        return Mono.fromCallable(()->Files.write(battleResultsImagePath(name), imageJpegBytes)).then();
     }
 
     private Mono<byte[]> readImage(String name){
-        return Mono.fromCallable(()->Files.readAllBytes(battleResultsImagePath(name)));
+        return Mono.fromCallable(()->{
+            Path imagePath = battleResultsImagePath(name);
+            if(Files.exists(imagePath)) {
+                return Files.readAllBytes(imagePath);
+            }else {
+                imagePath = battleResultsImagePathPng(name);
+                if(Files.exists(imagePath)) {
+                    return Files.readAllBytes(imagePath);
+                }
+            }
+            LOGGER.error("Can't find fam arena result image {}", name);
+            return null;
+        });
     }
 
     public Mono<byte[]> readImage(FamArenaBattle battle){
