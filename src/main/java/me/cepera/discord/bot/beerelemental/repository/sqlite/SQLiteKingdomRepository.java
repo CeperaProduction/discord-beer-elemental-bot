@@ -25,13 +25,14 @@ public class SQLiteKingdomRepository extends SQLiteRepository implements Kingdom
                     + "id integer PRIMARY KEY, "
                     + "guildId integer NOT NULL, "
                     + "roleId integer NOT NULL, "
-                    + "name text NOT NULL)"));
+                    + "name text NOT NULL, "
+                    + "wolf_max_penalty integer NOT NULL)"));
     }
 
     @Override
     public Flux<Kingdom> getKingdoms(long guildId) {
         return Flux.defer(()->Flux.fromIterable(connect(c->{
-            PreparedStatement stm = c.prepareStatement("SELECT id, roleId, name FROM kingdoms WHERE guildId = ?");
+            PreparedStatement stm = c.prepareStatement("SELECT id, roleId, name, wolf_max_penalty FROM kingdoms WHERE guildId = ?");
             stm.setLong(1, guildId);
             ResultSet rs = stm.executeQuery();
             List<Kingdom> kingdoms = new LinkedList<>();
@@ -41,6 +42,7 @@ public class SQLiteKingdomRepository extends SQLiteRepository implements Kingdom
                 kd.setId(rs.getInt(1));
                 kd.setRoleId(rs.getLong(2));
                 kd.setName(rs.getString(3));
+                kd.setWolfMaxPenalty(rs.getByte(4));
                 kingdoms.add(kd);
             }
             return kingdoms;
@@ -50,7 +52,7 @@ public class SQLiteKingdomRepository extends SQLiteRepository implements Kingdom
     @Override
     public Mono<Kingdom> getKingdom(int id) {
         return Mono.fromSupplier(()->connect(c->{
-            PreparedStatement stm = c.prepareStatement("SELECT guildId, roleId, name FROM kingdoms WHERE id = ?");
+            PreparedStatement stm = c.prepareStatement("SELECT guildId, roleId, name, wolf_max_penalty FROM kingdoms WHERE id = ?");
             stm.setInt(1, id);
             ResultSet rs = stm.executeQuery();
             if(rs.next()) {
@@ -59,6 +61,7 @@ public class SQLiteKingdomRepository extends SQLiteRepository implements Kingdom
                 kd.setGuildId(rs.getLong(1));
                 kd.setRoleId(rs.getLong(2));
                 kd.setName(rs.getString(3));
+                kd.setWolfMaxPenalty(rs.getByte(4));
                 return kd;
             }
             return null;
@@ -68,7 +71,7 @@ public class SQLiteKingdomRepository extends SQLiteRepository implements Kingdom
     @Override
     public Mono<Kingdom> getKingdomByName(long guildId, String name) {
         return Mono.fromSupplier(()->connect(c->{
-            PreparedStatement stm = c.prepareStatement("SELECT id, roleId, name FROM kingdoms WHERE guildId = ? and name = ? COLLATE NOCASE");
+            PreparedStatement stm = c.prepareStatement("SELECT id, roleId, name, wolf_max_penalty FROM kingdoms WHERE guildId = ? and name = ? COLLATE NOCASE");
             stm.setLong(1, guildId);
             stm.setString(2, name);
             ResultSet rs = stm.executeQuery();
@@ -78,6 +81,7 @@ public class SQLiteKingdomRepository extends SQLiteRepository implements Kingdom
                 kd.setId(rs.getInt(1));
                 kd.setRoleId(rs.getLong(2));
                 kd.setName(rs.getString(3));
+                kd.setWolfMaxPenalty(rs.getByte(4));
                 return kd;
             }
             return null;
@@ -98,7 +102,7 @@ public class SQLiteKingdomRepository extends SQLiteRepository implements Kingdom
         return Flux.defer(()->Flux.fromIterable(connect(c->{
             String inCondition = "("+String.join(", ", roleIds.stream().map(id->id.toString()).collect(Collectors.toList()))+")";
 
-            PreparedStatement stm = c.prepareStatement("SELECT id, name, roleId FROM kingdoms WHERE guildId = ? AND roleId IN "+inCondition);
+            PreparedStatement stm = c.prepareStatement("SELECT id, name, roleId, wolf_max_penalty FROM kingdoms WHERE guildId = ? AND roleId IN "+inCondition);
             stm.setLong(1, guildId);
             ResultSet rs = stm.executeQuery();
             List<Kingdom> kingdoms = new LinkedList<>();
@@ -108,6 +112,7 @@ public class SQLiteKingdomRepository extends SQLiteRepository implements Kingdom
                 kd.setId(rs.getInt(1));
                 kd.setName(rs.getString(2));
                 kd.setRoleId(rs.getLong(3));
+                kd.setWolfMaxPenalty(rs.getByte(4));
                 kingdoms.add(kd);
             }
             return kingdoms;
@@ -119,18 +124,20 @@ public class SQLiteKingdomRepository extends SQLiteRepository implements Kingdom
         return Mono.fromSupplier(()->connect(c->{
 
             if(kingdom.getId() != null) {
-                PreparedStatement stm = c.prepareStatement("UPDATE kingdoms SET roleId = ?, name = ? WHERE id = ?");
+                PreparedStatement stm = c.prepareStatement("UPDATE kingdoms SET roleId = ?, name = ?, wolf_max_penalty = ? WHERE id = ?");
                 stm.setLong(1, kingdom.getRoleId());
                 stm.setString(2, kingdom.getName());
-                stm.setInt(3, kingdom.getId());
+                stm.setInt(3, kingdom.getWolfMaxPenalty());
+                stm.setInt(4, kingdom.getId());
 
                 stm.executeUpdate();
 
             }else {
-                PreparedStatement stm = c.prepareStatement("INSERT INTO kingdoms (guildId, roleId, name) VALUES (?, ?, ?)");
+                PreparedStatement stm = c.prepareStatement("INSERT INTO kingdoms (guildId, roleId, name, wolf_max_penalty) VALUES (?, ?, ?, ?)");
                 stm.setLong(1, kingdom.getGuildId());
                 stm.setLong(2, kingdom.getRoleId());
                 stm.setString(3, kingdom.getName());
+                stm.setInt(4, kingdom.getWolfMaxPenalty());
 
                 stm.executeUpdate();
                 ResultSet rs = c.createStatement().executeQuery("SELECT last_insert_rowid()");

@@ -15,6 +15,7 @@ import me.cepera.discord.bot.beerelemental.discord.components.ImageToTextDiscord
 import me.cepera.discord.bot.beerelemental.discord.components.KingdomDataDiscordBotComponent;
 import me.cepera.discord.bot.beerelemental.discord.components.LocaleDiscordBotComponent;
 import me.cepera.discord.bot.beerelemental.discord.components.PermissionsDiscordBotComponent;
+import me.cepera.discord.bot.beerelemental.discord.components.WolfTableDiscordBotComponent;
 import me.cepera.discord.bot.beerelemental.discord.ComplexDiscordBot;
 import me.cepera.discord.bot.beerelemental.scheduling.AuctionDiscordBotComponentScheduler;
 import me.cepera.discord.bot.beerelemental.scheduling.DiscordBotScheduler;
@@ -56,6 +57,12 @@ public class DiscordModule {
     @Provides
     @IntoSet
     DiscordBotComponent famArenaDiscordBotComponent(FamArenaDiscordBotComponent component) {
+        return component;
+    }
+
+    @Provides
+    @IntoSet
+    DiscordBotComponent wolfTableDiscordBotComponent(WolfTableDiscordBotComponent component) {
         return component;
     }
 

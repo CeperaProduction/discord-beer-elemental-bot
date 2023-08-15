@@ -10,7 +10,9 @@ public enum Permission {
     MANAGE_KINGDOM_MEMBERS,
     SHOW_KINGDOM_AND_MEMBERS_DATA,
     FAM_ARENA_LOOKUP,
-    FAM_ARENA_STORE;
+    FAM_ARENA_STORE,
+    WOLF_TABLE_SHOW,
+    WOLF_TABLE_MANAGE;
 
     public String getValue() {
         return name().toLowerCase();

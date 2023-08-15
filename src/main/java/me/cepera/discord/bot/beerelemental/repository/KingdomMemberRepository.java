@@ -17,6 +17,9 @@ public interface KingdomMemberRepository {
 
     Mono<KingdomMember> findMemberByNickname(Kingdom kingdom, String nickname);
 
+
+    Mono<Void> dropReceivedWolfs(Kingdom kingdom);
+
     Mono<KingdomMember> saveMember(KingdomMember member);
 
     Mono<Void> deleteMember(KingdomMember member);

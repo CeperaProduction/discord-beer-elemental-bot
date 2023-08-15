@@ -12,6 +12,8 @@ public class KingdomMember {
 
     private Long discordUserId;
 
+    private WolfData wolfData = new WolfData();
+
     public Integer getId() {
         return id;
     }
@@ -44,9 +46,17 @@ public class KingdomMember {
         this.discordUserId = discordUserId;
     }
 
+    public WolfData getWolfData() {
+        return wolfData;
+    }
+
+    public void setWolfData(WolfData wolfData) {
+        this.wolfData = wolfData;
+    }
+
     @Override
     public int hashCode() {
-        return Objects.hash(discordUserId, id, kingdomId, name);
+        return Objects.hash(discordUserId, id, kingdomId, name, wolfData);
     }
 
     @Override
@@ -58,14 +68,15 @@ public class KingdomMember {
         if (getClass() != obj.getClass())
             return false;
         KingdomMember other = (KingdomMember) obj;
-        return Objects.equals(discordUserId, other.discordUserId) && id == other.id && kingdomId == other.kingdomId
-                && Objects.equals(name, other.name);
+        return Objects.equals(discordUserId, other.discordUserId) && Objects.equals(id, other.id)
+                && kingdomId == other.kingdomId && Objects.equals(name, other.name)
+                && Objects.equals(wolfData, other.wolfData);
     }
 
     @Override
     public String toString() {
         return "KingdomMember [id=" + id + ", name=" + name + ", kingdomId=" + kingdomId + ", discordUserId="
-                + discordUserId + "]";
+                + discordUserId + ", wolfData=" + wolfData + "]";
     }
 
 }

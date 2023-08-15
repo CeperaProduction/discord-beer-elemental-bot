@@ -21,8 +21,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import discord4j.common.util.Snowflake;
-import discord4j.core.event.domain.interaction.ApplicationCommandInteractionEvent;
 import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
+import discord4j.core.event.domain.interaction.DeferrableInteractionEvent;
 import discord4j.core.object.entity.Attachment;
 import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.Message;
@@ -473,23 +473,23 @@ public class AuctionDiscordBotComponent implements DiscordBotComponent, DiscordT
         return localization(locale, "message.auction.no_participants", "role", roleMention);
     }
 
-    private String wrongAttachmentResponseText(ApplicationCommandInteractionEvent event) {
+    private String wrongAttachmentResponseText(DeferrableInteractionEvent event) {
         return localization(event.getInteraction().getUserLocale(), "message.auction.wrong_attachment");
     }
 
-    private String wrongTargetRoleResponseText(ApplicationCommandInteractionEvent event) {
+    private String wrongTargetRoleResponseText(DeferrableInteractionEvent event) {
         return localization(event.getInteraction().getUserLocale(), "message.auction.wrong_role");
     }
 
-    private String wrongTimeResponseText(ApplicationCommandInteractionEvent event) {
+    private String wrongTimeResponseText(DeferrableInteractionEvent event) {
         return localization(event.getInteraction().getUserLocale(), "message.auction.wrong_time");
     }
 
-    private String onlyForChannelResponseText(ApplicationCommandInteractionEvent event) {
+    private String onlyForChannelResponseText(DeferrableInteractionEvent event) {
         return localization(event.getInteraction().getUserLocale(), "message.auction.only_in_channel");
     }
 
-    private String onlyTimeOrMembersResponseText(ApplicationCommandInteractionEvent event) {
+    private String onlyTimeOrMembersResponseText(DeferrableInteractionEvent event) {
         return localization(event.getInteraction().getUserLocale(), "message.auction.only_time_or_members");
     }
 

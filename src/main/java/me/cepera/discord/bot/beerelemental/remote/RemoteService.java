@@ -97,7 +97,8 @@ public interface RemoteService {
                             if(r.status().code() >= 400) {
                                 throw new IllegalStateException("Remote service responsed with bad status "+response.status());
                             }
-                        }));
+                        })
+                        .switchIfEmpty(Mono.fromRunnable(()->LOGGER.debug("Remote service response has no body"))));
     }
 
 }

@@ -273,13 +273,11 @@ public class FamArenaDiscordBotComponent implements DiscordBotComponent, Discord
 
     public Mono<Void> handleButtonInteractionEvent(ButtonInteractionEvent event){
 
-        ShowContext context;
-
-        if(event.getCustomId().startsWith("fams.show.")) {
-            context = showContexts.remove(event.getCustomId().substring(10));
-        }else {
-            context = null;
+        if(!event.getCustomId().startsWith("fams.show.")) {
+            return Mono.empty();
         }
+
+        ShowContext context = showContexts.remove(event.getCustomId().substring(10));
 
         if(context == null) {
             return event.reply()
@@ -495,12 +493,12 @@ public class FamArenaDiscordBotComponent implements DiscordBotComponent, Discord
         return msg;
     }
 
-    private String battleResultStored(ApplicationCommandInteractionEvent event, FamArenaBattle battle) {
+    private String battleResultStored(DeferrableInteractionEvent event, FamArenaBattle battle) {
         return localization(event.getInteraction().getUserLocale(), "message.fams.stored", "opponent", battle.getOpponent(),
                 "result", localization(event.getInteraction().getUserLocale(), "message.fams.result."+(battle.isWin() ? "win" : "lose")));
     }
 
-    private String availableTargets(ApplicationCommandInteractionEvent event, List<String> nicknames) {
+    private String availableTargets(DeferrableInteractionEvent event, List<String> nicknames) {
         String nicknamesStr = String.join(" ", nicknames);
         if(nicknamesStr.isEmpty()) {
             nicknamesStr = "<none>";
@@ -508,23 +506,23 @@ public class FamArenaDiscordBotComponent implements DiscordBotComponent, Discord
         return localization(event.getInteraction().getUserLocale(), "message.fams.targets", "nicknames", "```"+nicknamesStr+"```");
     }
 
-    private String wrongAttachmentResponseText(ApplicationCommandInteractionEvent event) {
+    private String wrongAttachmentResponseText(DeferrableInteractionEvent event) {
         return localization(event.getInteraction().getUserLocale(), "message.fams.wrong_attachment");
     }
 
-    private String onlyForServerResponseText(ApplicationCommandInteractionEvent event) {
+    private String onlyForServerResponseText(DeferrableInteractionEvent event) {
         return localization(event.getInteraction().getUserLocale(), "message.fams.only_in_channel");
     }
 
-    private String cantGetAnyImageResponseText(ApplicationCommandInteractionEvent event) {
+    private String cantGetAnyImageResponseText(DeferrableInteractionEvent event) {
         return localization(event.getInteraction().getUserLocale(), "message.fams.cant_receive_any_image");
     }
 
-    private String cantFindAnyNicknameResponseText(ApplicationCommandInteractionEvent event) {
+    private String cantFindAnyNicknameResponseText(DeferrableInteractionEvent event) {
         return localization(event.getInteraction().getUserLocale(), "message.fams.cant_find_any_nickname");
     }
 
-    private String cantRecognizeStatsResponseText(ApplicationCommandInteractionEvent event) {
+    private String cantRecognizeStatsResponseText(DeferrableInteractionEvent event) {
         return localization(event.getInteraction().getUserLocale(), "message.fams.cant_recognize_stats");
     }
 

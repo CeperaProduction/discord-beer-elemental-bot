@@ -12,6 +12,8 @@ public class Kingdom {
 
     private long roleId;
 
+    private byte wolfMaxPenalty;
+
     public Integer getId() {
         return id;
     }
@@ -44,14 +46,17 @@ public class Kingdom {
         this.roleId = roleId;
     }
 
-    @Override
-    public String toString() {
-        return "Kingdom [id=" + id + ", guildId=" + guildId + ", name=" + name + ", roleId=" + roleId + "]";
+    public byte getWolfMaxPenalty() {
+        return wolfMaxPenalty;
+    }
+
+    public void setWolfMaxPenalty(byte wolfMaxPenalty) {
+        this.wolfMaxPenalty = wolfMaxPenalty;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(guildId, id, name, roleId);
+        return Objects.hash(guildId, id, name, roleId, wolfMaxPenalty);
     }
 
     @Override
@@ -63,7 +68,14 @@ public class Kingdom {
         if (getClass() != obj.getClass())
             return false;
         Kingdom other = (Kingdom) obj;
-        return guildId == other.guildId && id == other.id && Objects.equals(name, other.name) && roleId == other.roleId;
+        return guildId == other.guildId && Objects.equals(id, other.id) && Objects.equals(name, other.name)
+                && roleId == other.roleId && wolfMaxPenalty == other.wolfMaxPenalty;
+    }
+
+    @Override
+    public String toString() {
+        return "Kingdom [id=" + id + ", guildId=" + guildId + ", name=" + name + ", roleId=" + roleId
+                + ", wolfMaxPenalty=" + wolfMaxPenalty + "]";
     }
 
 }
