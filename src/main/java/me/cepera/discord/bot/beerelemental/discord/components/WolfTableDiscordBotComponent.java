@@ -686,7 +686,8 @@ public class WolfTableDiscordBotComponent implements DiscordBotComponent, Discor
     }
 
     private Mono<Void> sendCandidates(ChatInputInteractionEvent event, Kingdom kingdom, List<String> nicknames){
-        Set<String> lowerNicknames = new HashSet<>(nicknames);
+        Set<String> lowerNicknames = new HashSet<>();
+        nicknames.forEach(nick->lowerNicknames.add(nick.toLowerCase()));
         List<String> unknownNicknames = new LinkedList<>();
         List<String> notNeeded = new LinkedList<>();
         List<String> penaltied = new LinkedList<>();

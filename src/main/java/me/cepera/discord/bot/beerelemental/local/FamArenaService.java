@@ -117,12 +117,12 @@ public class FamArenaService {
     }
 
     public Mono<FamArenaBattle> storeBattleResult(long guildId, byte[] imageBytes){
-        byte[] preparedImageBytes = compressImageTo1M(imageBytes);
-        return imageToTextService.findAllWordPositions(preparedImageBytes, ImageFormat.JPEG)
+        Tuple3<byte[], ImageFormat, byte[]> preparedImage = compressImageTo1M(imageBytes);
+        return imageToTextService.findAllWordPositions(preparedImage.getT1(), preparedImage.getT2())
                 .filter(word->simpleWordPattern.matcher(word.getWord()).matches())
                 .collectList()
                 .flatMap(this::getBattlersAndResult)
-                .flatMap(rawResult->storeBattleResult(guildId, preparedImageBytes, rawResult));
+                .flatMap(rawResult->storeBattleResult(guildId, preparedImage.getT3(), rawResult));
     }
 
     private Mono<FamArenaBattle> storeBattleResult(long guildId, byte[] imageBytes, Tuple3<WordPosition, WordPosition, Boolean> rawResult){
@@ -153,11 +153,14 @@ public class FamArenaService {
                 .then(battleRepository.addBattle(battle));
     }
 
-    private byte[] compressImageTo1M(byte[] bytes) {
+    private Tuple3<byte[], ImageFormat, byte[]> compressImageTo1M(byte[] bytes) {
         int cap = 1024000;
         BufferedImage image = ImageUtils.readImage(bytes);
-        bytes = ImageUtils.writeImage(image, ImageFormat.JPEG);
+        bytes = ImageUtils.writeImage(image, ImageFormat.PNG);
+        byte[] nextProcessing = bytes;
+        ImageFormat format = ImageFormat.PNG;
         if(bytes.length > cap) {
+            LOGGER.info("Image size before compression is {} bytes.", bytes.length);
             if(1.0 * image.getWidth() / image.getHeight() > 1.65) {
                 int x0 = (int) (image.getWidth() * 0.3);
                 int width0 = image.getWidth() - x0 * 2;
@@ -165,28 +168,35 @@ public class FamArenaService {
                         + "Original image size is {}x{}. Cutting X -> [{}, {}]",
                         bytes.length, cap, image.getWidth(), image.getHeight(), x0, width0);
                 image = ImageUtils.getSubImage(image, x0, 0, width0, image.getHeight());
+                bytes = ImageUtils.writeImage(image, ImageFormat.PNG);
+                nextProcessing = bytes;
+            }
+            if(bytes.length > cap) {
+                LOGGER.info("Image size is {} bytes that is greater than {} bytes cap. "
+                        + "Previous image size is {}x{}. Cutting Y -> [{}, {}]",
+                        bytes.length, cap, image.getWidth(), image.getHeight(), 0, image.getHeight()/2);
+                image = ImageUtils.getSubImage(image, 0, 0, image.getWidth(), image.getHeight()/2);
+                bytes = ImageUtils.writeImage(image, ImageFormat.PNG);
+            }
+            /*
+            if(bytes.length > cap) {
+                if(ImageUtils.getMaxDimension(image) > 1200) {
+                    image = ImageUtils.setMaxDimension(image, 1200);
+                    LOGGER.info("Image size is {} bytes that is greater than {} bytes cap. "
+                            + "Compressing to new image size {}x{}.",
+                            bytes.length, cap, image.getWidth(), image.getHeight());
+                    bytes = ImageUtils.writeImage(image, ImageFormat.PNG);
+                }
+            }*/
+            if(bytes.length > cap) {
+                LOGGER.info("Image size is {} bytes that is greater than {} bytes cap. "
+                        + "Converting it to JPEG format.", bytes.length, cap);
                 bytes = ImageUtils.writeImage(image, ImageFormat.JPEG);
+                format = ImageFormat.JPEG;
             }
-            if(bytes.length > cap) {
-                if(ImageUtils.getMaxDimension(image) > 1600) {
-                    image = ImageUtils.setMaxDimension(image, 1600);
-                    LOGGER.info("Image size is {} bytes that is greater than {} bytes cap. "
-                            + "Compressing to new image size {}x{}.",
-                            bytes.length, cap, image.getWidth(), image.getHeight());
-                    bytes = ImageUtils.writeImage(image, ImageFormat.JPEG);
-                }
-            }
-            if(bytes.length > cap) {
-                if(ImageUtils.getMaxDimension(image) > 1000) {
-                    image = ImageUtils.setMaxDimension(image, 1000);
-                    LOGGER.info("Image size is {} bytes that is greater than {} bytes cap. "
-                            + "Compressing to new image size {}x{}.",
-                            bytes.length, cap, image.getWidth(), image.getHeight());
-                    bytes = ImageUtils.writeImage(image, ImageFormat.JPEG);
-                }
-            }
+            LOGGER.info("Image size after compression is {} bytes.", bytes.length);
         }
-        return bytes;
+        return Tuples.of(bytes, format, nextProcessing);
     }
 
     private Mono<Tuple3<WordPosition, WordPosition, Boolean>> getBattlersAndResult(List<WordPosition> words){
