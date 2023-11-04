@@ -11,11 +11,9 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import me.cepera.discord.bot.beerelemental.repository.sqlite.SQLiteActiveAuctionRepository;
-
 public class SQLiteDatabase {
 
-    private static final Logger LOGGER = LogManager.getLogger(SQLiteActiveAuctionRepository.class);
+    private static final Logger LOGGER = LogManager.getLogger(SQLiteDatabase.class);
 
     private final String filePath;
 
